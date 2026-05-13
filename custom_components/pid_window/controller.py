@@ -194,8 +194,6 @@ class PidWindowController:
             return desired
         if outdoor_temp >= self.outdoor_lock_threshold:
             return float(self.min_position)
-        if outdoor_temp >= self.outdoor_summer_limit:
-            return min(desired, 30.0)
         return desired
 
     def _set_autotune_status(self, status: str) -> None:
