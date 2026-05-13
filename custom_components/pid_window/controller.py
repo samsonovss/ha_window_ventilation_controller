@@ -78,6 +78,7 @@ class ControllerState:
     temperature_trend: float | None = None
     active_profile: str = DEFAULT_PROFILE_MODE
     last_autotune_result: str | None = None
+    autotune_status: str | None = None
     enabled: bool = True
     autotune_running: bool = False
     status: str = "idle"
@@ -209,6 +210,12 @@ class PidWindowController:
             return min(desired, 30.0)
         return desired
 
+    def _set_autotune_status(self, status: str) -> None:
+        self.state.status = status
+        self.state.autotune_status = status
+        self.state.last_autotune_result = status
+        self._notify()
+
     def _parse_calibration_points(self, raw: str) -> list[tuple[float, float]]:
         points: list[tuple[float, float]] = []
         for chunk in raw.replace("\n", ",").split(","):
@@ -304,6 +311,11 @@ class PidWindowController:
         self.state.temperature_trend = temperature_trend
         self.state.enabled = self._enabled
         self.state.autotune_running = self._autotune_active
+
+        if self._autotune_active:
+            self.state.status = self.state.autotune_status or "autotune_running"
+            self._notify()
+            return
 
         if current_temp is None:
             self.state.status = "waiting_for_temperature"
@@ -424,10 +436,11 @@ class PidWindowController:
             current_position = float(self.min_position)
 
         self._autotune_active = True
+        self._integral = 0.0
+        self._previous_error = None
         self.state.autotune_running = True
-        self.state.status = f"autotune_started_{active_profile}"
-        self.state.last_autotune_result = self.state.status
-        self._notify()
+        self._set_autotune_status(f"autotune_started_{active_profile}")
+        self.state.status = self.state.autotune_status
 
         step = max(12.0, self.autotune_step)
         direction = 1.0 if current >= self.target_temp else -1.0
@@ -435,34 +448,33 @@ class PidWindowController:
         if abs(test_position - current_position) < 1.0:
             test_position = max(self.min_position, min(self.max_position, current_position - step * direction))
         if abs(test_position - current_position) < 1.0:
-            self.state.status = "autotune_no_room_for_step"
-            self.state.last_autotune_result = self.state.status
+            self._set_autotune_status("autotune_finished_no_room")
+            self.state.status = self.state.autotune_status
             self._autotune_active = False
             self.state.autotune_running = False
             self._notify()
             return
 
         start_temp = current
+        self._set_autotune_status("autotune_step_1_move")
         await self._set_cover_position(test_position)
-        self.state.status = f"autotune_sampling_{active_profile}"
-        self.state.last_autotune_result = self.state.status
-        self._notify()
+        self._set_autotune_status("autotune_step_2_sampling")
 
         sample_seconds = max(self.autotune_sample_seconds, self.update_interval * 4)
         start_monotonic = self.hass.loop.time()
         samples: list[float] = []
         elapsed = 0.0
         while elapsed < sample_seconds:
+            self._set_autotune_status(f"autotune_step_2_sampling_{len(samples) + 1}")
             await asyncio.sleep(max(15, self.update_interval))
             now = self._read_float(self.temp_sensor)
             if now is not None:
                 samples.append(now)
                 self.state.current_temp = now
-                self.state.status = f"autotune_sampling_{active_profile}_{len(samples)}"
-                self.state.last_autotune_result = self.state.status
-                self._notify()
+                self._set_autotune_status(f"autotune_step_2_sampling_{len(samples)}")
             elapsed = self.hass.loop.time() - start_monotonic
 
+        self._set_autotune_status("autotune_step_3_calculating")
         end_temp = samples[-1] if samples else self._read_float(self.temp_sensor)
         if end_temp is None:
             end_temp = start_temp
@@ -475,13 +487,12 @@ class PidWindowController:
 
         if not intended or effect < 0.005:
             kp, ki, kd = (self.summer_kp, self.summer_ki, self.summer_kd) if active_profile == PROFILE_SUMMER else (self.winter_kp, self.winter_ki, self.winter_kd)
-            self.state.status = f"autotune_finished_noisy_{active_profile}"
+            self._set_autotune_status(f"autotune_finished_noisy_{active_profile}")
         else:
             kp = max(4.0, min(40.0, 1.5 / max(effect, 0.01)))
             ki = max(0.03, min(0.8, kp / max(elapsed_hours * 12.0, 8.0)))
             kd = max(0.0, min(3.0, kp * min(elapsed_hours, 0.5) / 3.0))
-            self.state.status = f"autotune_finished_{active_profile}"
-        self.state.last_autotune_result = self.state.status
+            self._set_autotune_status(f"autotune_finished_{active_profile}")
 
         if active_profile == PROFILE_SUMMER:
             self.summer_kp, self.summer_ki, self.summer_kd = kp, ki, kd
@@ -498,6 +509,9 @@ class PidWindowController:
         self._autotune_active = False
         self.state.autotune_running = False
         self.state.active_profile = active_profile
+        self._integral = 0.0
+        self._previous_error = None
+        self.state.status = self.state.autotune_status
         self._notify()
         await self._async_tick(None)
 

@@ -77,7 +77,9 @@ def _schema(data: dict | None = None) -> vol.Schema:
             vol.Required(CONF_AUTOTUNE_SAMPLE_SECONDS, default=data.get(CONF_AUTOTUNE_SAMPLE_SECONDS, DEFAULT_AUTOTUNE_SAMPLE_SECONDS)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=60, max=900, step=30, mode=selector.NumberSelectorMode.BOX)
             ),
-            vol.Optional(CONF_CALIBRATION_POINTS, default=data.get(CONF_CALIBRATION_POINTS, DEFAULT_CALIBRATION_POINTS)): str,
+            vol.Optional(CONF_CALIBRATION_POINTS, default=data.get(CONF_CALIBRATION_POINTS, DEFAULT_CALIBRATION_POINTS)): selector.TextSelector(
+                selector.TextSelectorConfig(multiline=False)
+            ),
             vol.Required(CONF_KP, default=data.get(CONF_KP, DEFAULT_KP)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0, max=50, step=0.1, mode=selector.NumberSelectorMode.BOX)
             ),
