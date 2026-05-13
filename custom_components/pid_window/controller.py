@@ -122,6 +122,7 @@ class PidWindowController:
         self._last_sent_position: float | None = None
         self._last_update_tick: float | None = None
         self._sample_count = 0
+        self._no_effect_count = 0
         self._autotune_active = False
         self._autotune_task = None
         self._calibration_points = self._parse_calibration_points(self.calibration_points_raw)
@@ -376,13 +377,25 @@ class PidWindowController:
         output = self._season_limit(outdoor_temp, output)
         output = max(self.min_position, min(self.max_position, output))
 
+        # If the temperature is not moving for several cycles, nudge the window open a bit more.
+        temp_delta = None if self._last_temp is None else current_temp - self._last_temp
+        if error > 0.0 and temp_delta is not None and abs(temp_delta) < 0.05:
+            self._no_effect_count = min(self._no_effect_count + 1, 6)
+        else:
+            self._no_effect_count = 0
+
+        if self._no_effect_count >= 2:
+            output = min(self.max_position, output + min(20.0, self._no_effect_count * 5.0))
+
         self._previous_error = error
         self._last_temp = current_temp
         self._sample_count += 1
         self._last_update_tick = self.hass.loop.time()
         self._last_position = output
         self.state.pid_output = output
-        self.state.status = "tuning" if self._autotune_active else f"controlling_{active_profile}"
+        self.state.status = "tuning" if self._autotune_active else (
+            f"boosting_{active_profile}" if self._no_effect_count >= 2 else f"controlling_{active_profile}"
+        )
         await self._set_cover_position(output)
         self._notify()
 
