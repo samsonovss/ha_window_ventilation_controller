@@ -8,6 +8,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_COVER_ENTITY,
@@ -20,6 +21,7 @@ from .const import (
     CONF_OUTDOOR_LOCK_THRESHOLD,
     CONF_OUTDOOR_SENSOR,
     CONF_OUTDOOR_SUMMER_LIMIT,
+    CONF_PROFILE_MODE,
     CONF_TARGET_TEMP,
     CONF_TEMP_SENSOR,
     CONF_UPDATE_INTERVAL,
@@ -31,8 +33,12 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_OUTDOOR_LOCK_THRESHOLD,
     DEFAULT_OUTDOOR_SUMMER_LIMIT,
+    DEFAULT_PROFILE_MODE,
     DEFAULT_TARGET_TEMP,
     DEFAULT_UPDATE_INTERVAL,
+    PROFILE_AUTO,
+    PROFILE_SUMMER,
+    PROFILE_WINTER,
     DOMAIN,
 )
 
@@ -53,6 +59,12 @@ def _schema(data: dict | None = None) -> vol.Schema:
             ),
             vol.Required(CONF_TARGET_TEMP, default=data.get(CONF_TARGET_TEMP, DEFAULT_TARGET_TEMP)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=16, max=30, step=0.1, mode=selector.NumberSelectorMode.BOX)
+            ),
+            vol.Required(CONF_PROFILE_MODE, default=data.get(CONF_PROFILE_MODE, DEFAULT_PROFILE_MODE)): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[PROFILE_AUTO, PROFILE_WINTER, PROFILE_SUMMER],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
             ),
             vol.Required(CONF_KP, default=data.get(CONF_KP, DEFAULT_KP)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0, max=50, step=0.1, mode=selector.NumberSelectorMode.BOX)

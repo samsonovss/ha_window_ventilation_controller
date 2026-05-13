@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
@@ -119,6 +120,7 @@ class PidWindowController:
         self._last_update_tick: float | None = None
         self._sample_count = 0
         self._autotune_active = False
+        self._autotune_task = None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -195,11 +197,15 @@ class PidWindowController:
             return min(desired, 30.0)
         return desired
 
-    def _profile_from_context(self, outdoor_temp: float | None, temperature_trend: float | None) -> str:
+    def _profile_from_context(self, current_temp: float | None, outdoor_temp: float | None, temperature_trend: float | None) -> str:
         if self.profile_mode in {PROFILE_WINTER, PROFILE_SUMMER}:
             return self.profile_mode
         if outdoor_temp is None:
-            return PROFILE_SUMMER if (temperature_trend or 0.0) > 0.2 else PROFILE_WINTER
+            if temperature_trend is not None:
+                return PROFILE_SUMMER if temperature_trend > 0.2 else PROFILE_WINTER
+            if current_temp is not None:
+                return PROFILE_SUMMER if current_temp >= self.target_temp else PROFILE_WINTER
+            return PROFILE_WINTER
         if outdoor_temp >= self.outdoor_lock_threshold:
             return PROFILE_SUMMER
         if outdoor_temp >= self.outdoor_summer_limit:
@@ -249,7 +255,7 @@ class PidWindowController:
 
         error = current_temp - self.target_temp
         self.state.error = error
-        active_profile = self._profile_from_context(outdoor_temp, temperature_trend)
+        active_profile = self._profile_from_context(current_temp, outdoor_temp, temperature_trend)
         self.state.active_profile = active_profile
 
         # If the room is too cold, close the window fully.
@@ -333,25 +339,76 @@ class PidWindowController:
         await self._async_tick(None)
 
     async def async_autotune(self) -> None:
+        if self._autotune_active:
+            return
+        self._autotune_task = self.hass.async_create_task(self._async_autotune_run())
+
+    async def _async_autotune_run(self) -> None:
         current = self._read_float(self.temp_sensor)
         outdoor_temp = self._read_float(self.outdoor_sensor) if self.outdoor_sensor else None
         if current is None:
-            raise ValueError("Current temperature is unavailable")
-        active_profile = self._profile_from_context(outdoor_temp, None if self._last_temp is None else current - self._last_temp)
+            self.state.status = "autotune_no_temperature"
+            self._notify()
+            return
+
+        active_profile = self._profile_from_context(current, outdoor_temp, None if self._last_temp is None else current - self._last_temp)
+        current_position = self._cover_position()
+        if current_position is None:
+            current_position = float(self.min_position)
+
         self._autotune_active = True
         self.state.autotune_running = True
-        self.state.status = "autotune_started"
+        self.state.status = f"autotune_prepare_{active_profile}"
         self._notify()
-        # Conservative heuristic, safe for a window actuator.
-        deviation = abs(current - self.target_temp)
-        if deviation < 0.5:
-            gains = (DEFAULT_KP, DEFAULT_KI, DEFAULT_KD)
+
+        step = 12.0
+        direction = 1.0 if current >= self.target_temp else -1.0
+        test_position = max(self.min_position, min(self.max_position, current_position + step * direction))
+        if abs(test_position - current_position) < 1.0:
+            self.state.status = "autotune_no_room_for_step"
+            self._autotune_active = False
+            self.state.autotune_running = False
+            self._notify()
+            return
+
+        start_temp = current
+        await self._set_cover_position(test_position)
+        self.state.status = f"autotune_sampling_{active_profile}"
+        self._notify()
+
+        sample_seconds = max(180, self.update_interval * 4)
+        start_monotonic = self.hass.loop.time()
+        samples: list[float] = []
+        elapsed = 0.0
+        while elapsed < sample_seconds:
+            await asyncio.sleep(max(15, self.update_interval))
+            now = self._read_float(self.temp_sensor)
+            if now is not None:
+                samples.append(now)
+                self.state.current_temp = now
+                self.state.status = f"autotune_sampling_{active_profile}_{len(samples)}"
+                self._notify()
+            elapsed = self.hass.loop.time() - start_monotonic
+
+        end_temp = samples[-1] if samples else self._read_float(self.temp_sensor)
+        if end_temp is None:
+            end_temp = start_temp
+
+        delta_pos = test_position - current_position
+        delta_temp = end_temp - start_temp
+        effect = abs(delta_temp) / max(abs(delta_pos), 1.0)
+        intended = (current >= self.target_temp and delta_temp < 0) or (current < self.target_temp and delta_temp > 0)
+        elapsed_hours = max((self.hass.loop.time() - start_monotonic) / 3600.0, 1 / 3600.0)
+
+        if not intended or effect < 0.005:
+            kp, ki, kd = (self.summer_kp, self.summer_ki, self.summer_kd) if active_profile == PROFILE_SUMMER else (self.winter_kp, self.winter_ki, self.winter_kd)
+            self.state.status = f"autotune_noisy_{active_profile}"
         else:
-            kp = max(4.0, min(25.0, 18.0 / deviation))
-            ki = max(0.05, min(0.6, kp / 90.0))
-            kd = max(0.0, min(2.0, kp / 12.0))
-            gains = (kp, ki, kd)
-        kp, ki, kd = gains
+            kp = max(4.0, min(40.0, 1.5 / max(effect, 0.01)))
+            ki = max(0.03, min(0.8, kp / max(elapsed_hours * 12.0, 8.0)))
+            kd = max(0.0, min(3.0, kp * min(elapsed_hours, 0.5) / 3.0))
+            self.state.status = f"autotune_done_{active_profile}"
+
         if active_profile == PROFILE_SUMMER:
             self.summer_kp, self.summer_ki, self.summer_kd = kp, ki, kd
             self._async_save_option(CONF_SUMMER_KP, kp)
@@ -362,9 +419,11 @@ class PidWindowController:
             self._async_save_option(CONF_WINTER_KP, kp)
             self._async_save_option(CONF_WINTER_KI, ki)
             self._async_save_option(CONF_WINTER_KD, kd)
-        self.state.status = "autotune_finished"
+
+        await self._set_cover_position(current_position)
         self._autotune_active = False
         self.state.autotune_running = False
+        self.state.active_profile = active_profile
         self._notify()
         await self._async_tick(None)
 

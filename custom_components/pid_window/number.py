@@ -19,6 +19,14 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
         PidWindowNumber(controller, entry.entry_id, "kp", "PID Kp", 0.0, 50.0, 0.1, None),
         PidWindowNumber(controller, entry.entry_id, "ki", "PID Ki", 0.0, 5.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "kd", "PID Kd", 0.0, 10.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "winter_kp", "Winter Kp", 0.0, 50.0, 0.1, None),
+        PidWindowNumber(controller, entry.entry_id, "winter_ki", "Winter Ki", 0.0, 5.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "winter_kd", "Winter Kd", 0.0, 10.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "summer_kp", "Summer Kp", 0.0, 50.0, 0.1, None),
+        PidWindowNumber(controller, entry.entry_id, "summer_ki", "Summer Ki", 0.0, 5.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "summer_kd", "Summer Kd", 0.0, 10.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "adaptive_outdoor_factor", "Adaptive outdoor factor", 0.0, 1.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "adaptive_rate_factor", "Adaptive rate factor", 0.0, 1.0, 0.01, None),
     ])
 
 
