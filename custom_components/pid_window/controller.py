@@ -481,7 +481,14 @@ class PidWindowController:
         elapsed_hours = max((self.hass.loop.time() - start_monotonic) / 3600.0, 1 / 3600.0)
 
         if not intended or effect < 0.005:
-            kp, ki, kd = (self.summer_kp, self.summer_ki, self.summer_kd) if active_profile == PROFILE_SUMMER else (self.winter_kp, self.winter_ki, self.winter_kd)
+            if active_profile == PROFILE_SUMMER:
+                kp = max(self.summer_kp, DEFAULT_SUMMER_KP)
+                ki = max(self.summer_ki, DEFAULT_SUMMER_KI)
+                kd = max(self.summer_kd, DEFAULT_SUMMER_KD)
+            else:
+                kp = max(self.winter_kp, DEFAULT_WINTER_KP)
+                ki = max(self.winter_ki, DEFAULT_WINTER_KI)
+                kd = max(self.winter_kd, DEFAULT_WINTER_KD)
             self._set_autotune_status(f"autotune_finished_noisy_{active_profile}")
         else:
             kp = max(4.0, min(40.0, 1.5 / max(effect, 0.01)))
