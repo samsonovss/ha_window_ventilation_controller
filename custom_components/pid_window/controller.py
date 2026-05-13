@@ -21,6 +21,7 @@ from .const import (
     CONF_CALIBRATION_POINTS,
     CONF_COVER_ENTITY,
     CONF_ENABLE_OUTDOOR_LOCK,
+    CONF_ENABLE_TEMP_SENSOR_GUARD,
     CONF_MAX_POSITION,
     CONF_MIN_POSITION,
     CONF_OUTDOOR_LOCK_THRESHOLD,
@@ -40,6 +41,7 @@ from .const import (
     DEFAULT_ADAPTIVE_RATE_FACTOR,
     DEFAULT_AUTOTUNE_SAMPLE_SECONDS,
     DEFAULT_CALIBRATION_POINTS,
+    DEFAULT_ENABLE_TEMP_SENSOR_GUARD,
     DEFAULT_MAX_POSITION,
     DEFAULT_MIN_POSITION,
     DEFAULT_OUTDOOR_LOCK_THRESHOLD,
@@ -72,6 +74,7 @@ class ControllerState:
     active_profile: str = DEFAULT_PROFILE_MODE
     last_autotune_result: str | None = None
     enabled: bool = True
+    temp_sensor_guard_tripped: bool = False
     autotune_running: bool = False
     status: str = "idle"
 
@@ -104,6 +107,7 @@ class PidWindowController:
         self.min_position = int(options.get(CONF_MIN_POSITION, data.get(CONF_MIN_POSITION, DEFAULT_MIN_POSITION)))
         self.max_position = int(options.get(CONF_MAX_POSITION, data.get(CONF_MAX_POSITION, DEFAULT_MAX_POSITION)))
         self.enable_outdoor_lock = bool(options.get(CONF_ENABLE_OUTDOOR_LOCK, data.get(CONF_ENABLE_OUTDOOR_LOCK, False)))
+        self.enable_temp_sensor_guard = bool(options.get(CONF_ENABLE_TEMP_SENSOR_GUARD, data.get(CONF_ENABLE_TEMP_SENSOR_GUARD, DEFAULT_ENABLE_TEMP_SENSOR_GUARD)))
         self.outdoor_summer_limit = float(options.get(CONF_OUTDOOR_SUMMER_LIMIT, data.get(CONF_OUTDOOR_SUMMER_LIMIT, DEFAULT_OUTDOOR_SUMMER_LIMIT)))
         self.outdoor_lock_threshold = float(options.get(CONF_OUTDOOR_LOCK_THRESHOLD, data.get(CONF_OUTDOOR_LOCK_THRESHOLD, DEFAULT_OUTDOOR_LOCK_THRESHOLD)))
 
@@ -207,6 +211,11 @@ class PidWindowController:
         self.state.status = "disabled" if not enabled else self.state.status
         self._notify()
 
+    def _set_temp_sensor_guard_enabled(self, enabled: bool) -> None:
+        self.enable_temp_sensor_guard = bool(enabled)
+        self._async_save_option(CONF_ENABLE_TEMP_SENSOR_GUARD, self.enable_temp_sensor_guard)
+        self._notify()
+
     def _parse_calibration_points(self, raw: str) -> list[tuple[float, float]]:
         points: list[tuple[float, float]] = []
         for chunk in raw.replace("\n", ",").split(","):
@@ -308,6 +317,21 @@ class PidWindowController:
         self.state.temperature_trend = temperature_trend
         self.state.enabled = self._enabled
         self.state.autotune_running = self._autotune_active
+
+        if self.enable_temp_sensor_guard and current_temp is None:
+            self.state.temp_sensor_guard_tripped = True
+            self.state.status = "temp_sensor_missing"
+            self.state.pid_output = float(self.min_position)
+            await self._set_cover_position(float(self.min_position))
+            if self._enabled:
+                self._set_enabled_runtime(False)
+            self._notify()
+            return
+
+        if self.enable_temp_sensor_guard and self.state.temp_sensor_guard_tripped and current_temp is not None:
+            self.state.temp_sensor_guard_tripped = False
+            if not self._enabled:
+                self._set_enabled_runtime(True)
 
         if self._autotune_active:
             self.state.status = self.state.last_autotune_result or "autotune_running"
@@ -427,6 +451,10 @@ class PidWindowController:
         self.enable_outdoor_lock = bool(enabled)
         self._async_save_option(CONF_ENABLE_OUTDOOR_LOCK, self.enable_outdoor_lock)
         self._notify()
+        await self._async_tick(None)
+
+    async def async_set_temp_sensor_guard_enabled(self, enabled: bool) -> None:
+        self._set_temp_sensor_guard_enabled(enabled)
         await self._async_tick(None)
 
     async def async_set_outdoor_summer_limit(self, value: float) -> None:
