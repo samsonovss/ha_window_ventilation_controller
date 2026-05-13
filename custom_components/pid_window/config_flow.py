@@ -8,6 +8,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_COVER_ENTITY,
@@ -41,16 +42,10 @@ def _schema(data: dict | None = None) -> vol.Schema:
     data = data or {}
     return vol.Schema(
         {
-            vol.Required(CONF_NAME, default=data.get(CONF_NAME, DEFAULT_NAME)): str,
-            vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="cover")
-            ),
-            vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR, "")): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
-            ),
+            vol.Required(CONF_NAME, default=data.get(CONF_NAME, DEFAULT_NAME)): cv.string,
+            vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): cv.string,
+            vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): cv.string,
+            vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR, "")): cv.string,
             vol.Required(CONF_TARGET_TEMP, default=data.get(CONF_TARGET_TEMP, DEFAULT_TARGET_TEMP)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=16, max=30, step=0.1, mode=selector.NumberSelectorMode.BOX)
             ),
