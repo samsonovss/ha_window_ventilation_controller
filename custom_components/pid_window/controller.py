@@ -94,6 +94,10 @@ class PidWindowController:
         )
         await self._async_tick(None)
 
+    def _async_save_option(self, key: str, value: Any) -> None:
+        options = {**self.entry.options, key: value}
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+
     async def async_stop(self) -> None:
         if self._unsub_interval:
             self._unsub_interval()
@@ -224,6 +228,7 @@ class PidWindowController:
 
     async def async_set_enabled(self, enabled: bool) -> None:
         self._enabled = enabled
+        self._async_save_option("enabled", enabled)
         self.state.enabled = enabled
         self.state.status = "disabled" if not enabled else self.state.status
         self._notify()
@@ -232,11 +237,13 @@ class PidWindowController:
 
     async def async_set_target_temp(self, target_temp: float) -> None:
         self.target_temp = target_temp
+        self._async_save_option(CONF_TARGET_TEMP, target_temp)
         self._notify()
         await self._async_tick(None)
 
     async def async_set_gain(self, key: str, value: float) -> None:
         setattr(self, key, value)
+        self._async_save_option(key, value)
         self._notify()
         await self._async_tick(None)
 
@@ -256,6 +263,9 @@ class PidWindowController:
             self.kp = max(4.0, min(25.0, 18.0 / deviation))
             self.ki = max(0.05, min(0.6, self.kp / 90.0))
             self.kd = max(0.0, min(2.0, self.kp / 12.0))
+        self._async_save_option(CONF_KP, self.kp)
+        self._async_save_option(CONF_KI, self.ki)
+        self._async_save_option(CONF_KD, self.kd)
         self.state.status = "autotune_finished"
         self._autotune_active = False
         self.state.autotune_running = False
