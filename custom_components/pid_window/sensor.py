@@ -22,8 +22,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
         PidWindowSensor(controller, entry.entry_id, "error", "Temperature error", UnitOfTemperature.CELSIUS),
         PidWindowSensor(controller, entry.entry_id, "temperature_trend", "Temperature trend", "°C/h"),
         PidWindowSensor(controller, entry.entry_id, "active_profile", "Active profile", None, is_text=True),
-        PidWindowSensor(controller, entry.entry_id, "autotune_status", "Autotune status", None, is_text=True),
-        PidWindowSensor(controller, entry.entry_id, "last_autotune_result", "Last autotune", None, is_text=True),
         PidWindowSensor(controller, entry.entry_id, "status", "Controller status", None, is_text=True),
     ]
     async_add_entities(sensors)
@@ -40,7 +38,7 @@ class PidWindowSensor(SensorEntity):
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_native_unit_of_measurement = unit
         self._remove_listener = controller.register_listener(self._handle_update)
-        if key in {"status", "active_profile", "autotune_status", "last_autotune_result", "temperature_trend", "pid_output", "error"}:
+        if key in {"status", "active_profile", "temperature_trend", "pid_output", "error"}:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
         if key in {"current_temp", "outdoor_temp", "error"}:
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
