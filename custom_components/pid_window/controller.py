@@ -393,6 +393,8 @@ class PidWindowController:
             blocking=False,
         )
         self._last_sent_position = position
+        self.state.cover_position = position
+        self._notify()
 
     async def async_set_enabled(self, enabled: bool) -> None:
         self._set_enabled_runtime(enabled)
@@ -508,6 +510,11 @@ class PidWindowController:
             self._async_save_option(CONF_WINTER_KP, kp)
             self._async_save_option(CONF_WINTER_KI, ki)
             self._async_save_option(CONF_WINTER_KD, kd)
+
+        self.kp, self.ki, self.kd = kp, ki, kd
+        self._async_save_option(CONF_KP, kp)
+        self._async_save_option(CONF_KI, ki)
+        self._async_save_option(CONF_KD, kd)
 
         await self._set_cover_position(current_position, apply_calibration=False)
         self._autotune_active = False
