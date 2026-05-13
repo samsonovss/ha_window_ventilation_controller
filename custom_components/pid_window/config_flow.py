@@ -42,13 +42,13 @@ def _schema(data: dict | None = None) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_NAME, default=data.get(CONF_NAME, DEFAULT_NAME)): str,
-            vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR)): selector.EntitySelector(
+            vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor")
             ),
-            vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY)): selector.EntitySelector(
+            vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="cover")
             ),
-            vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR)): selector.EntitySelector(
+            vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR, "")): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor")
             ),
             vol.Required(CONF_TARGET_TEMP, default=data.get(CONF_TARGET_TEMP, DEFAULT_TARGET_TEMP)): selector.NumberSelector(
@@ -92,11 +92,6 @@ class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
         return self.async_show_form(step_id="user", data_schema=_schema(), errors=errors)
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        return PidWindowOptionsFlow(config_entry)
-
 
 class PidWindowOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
@@ -106,3 +101,8 @@ class PidWindowOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(step_id="init", data_schema=_schema({**self.config_entry.data, **self.config_entry.options}))
+
+
+@callback
+def async_get_options_flow(config_entry):
+    return PidWindowOptionsFlow(config_entry)
