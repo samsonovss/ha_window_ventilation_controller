@@ -228,6 +228,11 @@ class PidWindowController:
         points.sort(key=lambda item: item[0])
         return points
 
+    def _refresh_calibration_points(self, raw: str) -> None:
+        self.calibration_points_raw = raw
+        self._calibration_points = self._parse_calibration_points(raw)
+        self._calibration_max_cm = max((cm for _, cm in self._calibration_points), default=0.0)
+
     def _invert_calibration(self, desired_cm: float) -> float:
         if not self._calibration_points or self._calibration_max_cm <= 0:
             return desired_cm
@@ -406,6 +411,42 @@ class PidWindowController:
     async def async_set_gain(self, key: str, value: float) -> None:
         setattr(self, key, value)
         self._async_save_option(key, value)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_update_interval(self, value: int) -> None:
+        self.update_interval = int(value)
+        self._async_save_option(CONF_UPDATE_INTERVAL, self.update_interval)
+        await self.async_stop()
+        await self.async_start()
+
+    async def async_set_autotune_sample_seconds(self, value: int) -> None:
+        self.autotune_sample_seconds = int(value)
+        self._async_save_option(CONF_AUTOTUNE_SAMPLE_SECONDS, self.autotune_sample_seconds)
+        self._notify()
+
+    async def async_set_outdoor_lock_enabled(self, enabled: bool) -> None:
+        self.enable_outdoor_lock = bool(enabled)
+        self._async_save_option(CONF_ENABLE_OUTDOOR_LOCK, self.enable_outdoor_lock)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_outdoor_summer_limit(self, value: float) -> None:
+        self.outdoor_summer_limit = float(value)
+        self._async_save_option(CONF_OUTDOOR_SUMMER_LIMIT, self.outdoor_summer_limit)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_outdoor_lock_threshold(self, value: float) -> None:
+        self.outdoor_lock_threshold = float(value)
+        self._async_save_option(CONF_OUTDOOR_LOCK_THRESHOLD, self.outdoor_lock_threshold)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_calibration_points(self, value: str) -> None:
+        raw = (value or "").strip()
+        self._refresh_calibration_points(raw)
+        self._async_save_option(CONF_CALIBRATION_POINTS, raw)
         self._notify()
         await self._async_tick(None)
 

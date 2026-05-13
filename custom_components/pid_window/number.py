@@ -16,6 +16,10 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     controller = runtime.controller
     async_add_entities([
         PidWindowNumber(controller, entry.entry_id, "target_temp", "Target temperature", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "update_interval", "Update interval", 15.0, 600.0, 15.0, None),
+        PidWindowNumber(controller, entry.entry_id, "autotune_sample_seconds", "Autotune sample seconds", 60.0, 900.0, 30.0, None),
+        PidWindowNumber(controller, entry.entry_id, "outdoor_summer_limit", "Outdoor summer limit", -20.0, 40.0, 0.1, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "outdoor_lock_threshold", "Outdoor lock threshold", -10.0, 50.0, 0.1, UnitOfTemperature.CELSIUS),
         PidWindowNumber(controller, entry.entry_id, "winter_kp", "Winter Kp", 0.0, 50.0, 0.1, None),
         PidWindowNumber(controller, entry.entry_id, "winter_ki", "Winter Ki", 0.0, 5.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "winter_kd", "Winter Kd", 0.0, 10.0, 0.01, None),
@@ -50,6 +54,18 @@ class PidWindowNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         if self._key == "target_temp":
             await self._controller.async_set_target_temp(float(value))
+            return
+        if self._key == "update_interval":
+            await self._controller.async_set_update_interval(int(value))
+            return
+        if self._key == "autotune_sample_seconds":
+            await self._controller.async_set_autotune_sample_seconds(int(value))
+            return
+        if self._key == "outdoor_summer_limit":
+            await self._controller.async_set_outdoor_summer_limit(float(value))
+            return
+        if self._key == "outdoor_lock_threshold":
+            await self._controller.async_set_outdoor_lock_threshold(float(value))
             return
 
         await self._controller.async_set_gain(self._key, float(value))

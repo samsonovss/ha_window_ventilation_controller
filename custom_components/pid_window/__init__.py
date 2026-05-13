@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .controller import PidWindowController
 
-PLATFORMS = ["switch", "number", "sensor", "button", "select"]
+PLATFORMS = ["switch", "number", "sensor", "button", "select", "text"]
 
 
 @dataclass
