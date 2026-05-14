@@ -17,8 +17,6 @@ The integration is designed for cooling a room with outside air: it reads indoor
 - Temperature deadband to avoid unnecessary movement near target
 - Position change threshold to avoid tiny cover updates
 - Controller status sensor for debugging/automation
-- Optional actuator calibration curve
-- Autotune button with a real stepped window test
 
 ## Cooling modes
 
@@ -104,7 +102,6 @@ Main controls:
 - `Target temperature`
 - `Enable temperature deadband`
 - `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`
-- `Autotune` button
 
 Configuration:
 
@@ -114,11 +111,7 @@ Configuration:
 - `Cooling delta threshold` — default `8 °C`, range `3–20 °C`, step `0.5 °C`
 - `Cooling delta hysteresis` — default `1 °C`, range `0–5 °C`, step `0.5 °C`
 - `Position change threshold` — default `1%`, range `0–10%`, step `0.5%`
-- `Adaptive outdoor factor`
-- `Adaptive rate factor`
 - `Update interval`
-- `Autotune sample seconds`
-- `Calibration points`
 
 Sensors:
 
@@ -135,41 +128,6 @@ Removed legacy/debug entities:
 - `Temp sensor guard` switch
 - `Temperature error` sensor
 - `Temperature trend` sensor
-
-## Migration from old PID profiles
-
-Older versions had separate PID profiles:
-
-- `Winter Kp / Ki / Kd`
-- `Summer Kp / Ki / Kd`
-- `PID Profile Mode`
-
-These are removed.
-
-On update, the integration migrates old config entries:
-
-- old `winter_kp / winter_ki / winter_kd` become the new common `PID Kp / PID Ki / PID Kd`
-- if winter values are missing, defaults are used
-- old summer values are ignored
-- deprecated winter/summer and old debug/control entities are removed from the entity registry
-
-After update, only the common PID settings should remain visible.
-
-## Calibration points
-
-Optional text field with points in the form:
-
-```text
-10:0.5,20:1.0,30:1.5,50:2.5,100:12.0
-```
-
-This maps PID output percent to the real opening of the window/actuator.
-
-## Autotune
-
-Autotune temporarily disables normal PID, moves the window through stepped positions, samples the room response, updates the common PID coefficients, then restores normal control.
-
-It is a real stepped response test, not an instant coefficient guess.
 
 ## Installation
 

@@ -23,10 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
         PidWindowNumber(controller, entry.entry_id, "kp", "PID Kp", 0.0, 50.0, 0.1, None),
         PidWindowNumber(controller, entry.entry_id, "ki", "PID Ki", 0.0, 5.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "kd", "PID Kd", 0.0, 10.0, 0.01, None),
-        PidWindowNumber(controller, entry.entry_id, "adaptive_outdoor_factor", "Adaptive outdoor factor", 0.0, 1.0, 0.01, None),
-        PidWindowNumber(controller, entry.entry_id, "adaptive_rate_factor", "Adaptive rate factor", 0.0, 1.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "update_interval", "Update interval", 15.0, 600.0, 15.0, None),
-        PidWindowNumber(controller, entry.entry_id, "autotune_sample_seconds", "Autotune sample seconds", 60.0, 900.0, 30.0, None),
     ])
 
 
@@ -56,9 +53,6 @@ class PidWindowNumber(NumberEntity):
             return
         if self._key == "update_interval":
             await self._controller.async_set_update_interval(int(value))
-            return
-        if self._key == "autotune_sample_seconds":
-            await self._controller.async_set_autotune_sample_seconds(int(value))
             return
         if self._key == "cooling_delta_threshold":
             await self._controller.async_set_cooling_delta_threshold(float(value))

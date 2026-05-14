@@ -11,7 +11,7 @@ from homeassistant.helpers import entity_registry as er
 from .const import DOMAIN, DEFAULT_KD, DEFAULT_KI, DEFAULT_KP
 from .controller import PidWindowController
 
-PLATFORMS = ["switch", "number", "sensor", "button", "select", "text"]
+PLATFORMS = ["switch", "number", "sensor", "select"]
 
 
 @dataclass
@@ -35,6 +35,11 @@ _OLD_ENTITY_UNIQUE_IDS = (
     "outdoor_lock_enabled",
     "outdoor_summer_limit",
     "outdoor_lock_threshold",
+    "adaptive_outdoor_factor",
+    "adaptive_rate_factor",
+    "autotune_sample_seconds",
+    "calibration_points",
+    "autotune",
 )
 
 _OLD_OPTION_KEYS = (
@@ -50,6 +55,11 @@ _OLD_OPTION_KEYS = (
     "enable_outdoor_lock",
     "enable_temp_sensor_guard",
     "enabled",
+    "adaptive_outdoor_factor",
+    "adaptive_rate_factor",
+    "autotune_sample_seconds",
+    "calibration_points",
+    "autotune_step",
 )
 
 
@@ -75,17 +85,15 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old profile-based PID settings and remove deprecated entities."""
     data = _migrate_pid_options(entry.data, fill_defaults=True)
     options = _migrate_pid_options(entry.options)
-    hass.config_entries.async_update_entry(entry, data=data, options=options, version=3)
+    hass.config_entries.async_update_entry(entry, data=data, options=options, version=4)
 
     registry = er.async_get(hass)
     for old_key in _OLD_ENTITY_UNIQUE_IDS:
-        entity_id = registry.async_get_entity_id("number", DOMAIN, f"{entry.entry_id}_{old_key}")
-        if entity_id is None:
-            entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{old_key}")
-        if entity_id is None:
-            entity_id = registry.async_get_entity_id("switch", DOMAIN, f"{entry.entry_id}_{old_key}")
-        if entity_id is not None:
-            registry.async_remove(entity_id)
+        for domain in ("number", "sensor", "switch", "select", "button", "text"):
+            entity_id = registry.async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{old_key}")
+            if entity_id is not None:
+                registry.async_remove(entity_id)
+                break
 
     return True
 

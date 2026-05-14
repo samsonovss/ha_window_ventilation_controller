@@ -25,8 +25,6 @@ from .const import (
     CONF_TARGET_TEMP,
     CONF_TEMP_DEADBAND,
     CONF_TEMP_SENSOR,
-    CONF_AUTOTUNE_SAMPLE_SECONDS,
-    CONF_CALIBRATION_POINTS,
     CONF_UPDATE_INTERVAL,
     DEFAULT_MAX_POSITION,
     DEFAULT_MIN_POSITION,
@@ -38,8 +36,6 @@ from .const import (
     DEFAULT_KP,
     DEFAULT_TARGET_TEMP,
     DEFAULT_UPDATE_INTERVAL,
-    DEFAULT_AUTOTUNE_SAMPLE_SECONDS,
-    DEFAULT_CALIBRATION_POINTS,
     DEFAULT_COOLING_DELTA_HYSTERESIS,
     DEFAULT_COOLING_DELTA_THRESHOLD,
     DEFAULT_ENABLE_TEMP_DEADBAND,
@@ -103,10 +99,6 @@ def _schema(data: dict | None = None) -> vol.Schema:
             vol.Required(CONF_POSITION_CHANGE_THRESHOLD, default=data.get(CONF_POSITION_CHANGE_THRESHOLD, DEFAULT_POSITION_CHANGE_THRESHOLD)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0, max=10, step=0.5, mode=selector.NumberSelectorMode.SLIDER)
             ),
-            vol.Required(CONF_AUTOTUNE_SAMPLE_SECONDS, default=data.get(CONF_AUTOTUNE_SAMPLE_SECONDS, DEFAULT_AUTOTUNE_SAMPLE_SECONDS)): selector.NumberSelector(
-                selector.NumberSelectorConfig(min=60, max=900, step=30, mode=selector.NumberSelectorMode.BOX)
-            ),
-            vol.Optional(CONF_CALIBRATION_POINTS, default=data.get(CONF_CALIBRATION_POINTS, DEFAULT_CALIBRATION_POINTS)): str,
             vol.Required(CONF_UPDATE_INTERVAL, default=data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=15, max=600, step=15, mode=selector.NumberSelectorMode.BOX)
             ),
@@ -121,7 +113,7 @@ def _schema(data: dict | None = None) -> vol.Schema:
 
 
 class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 3
+    VERSION = 4
 
     async def async_step_user(self, user_input=None):
         errors = {}

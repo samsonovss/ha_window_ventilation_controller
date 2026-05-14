@@ -2,23 +2,17 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
 from typing import Any, Callable
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
-    CONF_ADAPTIVE_OUTDOOR_FACTOR,
-    CONF_ADAPTIVE_RATE_FACTOR,
-    CONF_AUTOTUNE_SAMPLE_SECONDS,
-    CONF_AUTOTUNE_STEP,
-    CONF_CALIBRATION_POINTS,
     CONF_COOLING_DELTA_HYSTERESIS,
     CONF_COOLING_DELTA_THRESHOLD,
     CONF_COOLING_MODE,
@@ -35,10 +29,6 @@ from .const import (
     CONF_TEMP_DEADBAND,
     CONF_TEMP_SENSOR,
     CONF_UPDATE_INTERVAL,
-    DEFAULT_ADAPTIVE_OUTDOOR_FACTOR,
-    DEFAULT_ADAPTIVE_RATE_FACTOR,
-    DEFAULT_AUTOTUNE_SAMPLE_SECONDS,
-    DEFAULT_CALIBRATION_POINTS,
     DEFAULT_COOLING_DELTA_HYSTERESIS,
     DEFAULT_COOLING_DELTA_THRESHOLD,
     DEFAULT_COOLING_MODE,
@@ -67,11 +57,7 @@ class ControllerState:
     cooling_delta: float | None = None
     cover_position: float | None = None
     pid_output: float | None = None
-    error: float | None = None
-    temperature_trend: float | None = None
-    last_autotune_result: str | None = None
     enabled: bool = True
-    autotune_running: bool = False
     status: str = "idle"
 
 
@@ -101,10 +87,6 @@ class PidWindowController:
         self.kp = float(options.get(CONF_KP, data.get(CONF_KP, data.get("winter_kp", DEFAULT_KP))))
         self.ki = float(options.get(CONF_KI, data.get(CONF_KI, data.get("winter_ki", DEFAULT_KI))))
         self.kd = float(options.get(CONF_KD, data.get(CONF_KD, data.get("winter_kd", DEFAULT_KD))))
-        self.adaptive_outdoor_factor = float(options.get(CONF_ADAPTIVE_OUTDOOR_FACTOR, data.get(CONF_ADAPTIVE_OUTDOOR_FACTOR, DEFAULT_ADAPTIVE_OUTDOOR_FACTOR)))
-        self.adaptive_rate_factor = float(options.get(CONF_ADAPTIVE_RATE_FACTOR, data.get(CONF_ADAPTIVE_RATE_FACTOR, DEFAULT_ADAPTIVE_RATE_FACTOR)))
-        self.autotune_sample_seconds = int(options.get(CONF_AUTOTUNE_SAMPLE_SECONDS, data.get(CONF_AUTOTUNE_SAMPLE_SECONDS, DEFAULT_AUTOTUNE_SAMPLE_SECONDS)))
-        self.calibration_points_raw = str(options.get(CONF_CALIBRATION_POINTS, data.get(CONF_CALIBRATION_POINTS, DEFAULT_CALIBRATION_POINTS)))
         self.update_interval = int(options.get(CONF_UPDATE_INTERVAL, data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)))
         self.min_position = int(options.get(CONF_MIN_POSITION, data.get(CONF_MIN_POSITION, DEFAULT_MIN_POSITION)))
         self.max_position = int(options.get(CONF_MAX_POSITION, data.get(CONF_MAX_POSITION, DEFAULT_MAX_POSITION)))
@@ -127,10 +109,6 @@ class PidWindowController:
         self._sample_count = 0
         self._cooling_pid_allowed = False
         self._no_effect_count = 0
-        self._autotune_active = False
-        self._autotune_task = None
-        self._calibration_points = self._parse_calibration_points(self.calibration_points_raw)
-        self._calibration_max_cm = max((cm for _, cm in self._calibration_points), default=0.0)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -202,84 +180,14 @@ class PidWindowController:
             return float(self.min_position)
         return None
 
-    def _set_autotune_status(self, status: str) -> None:
-        self.state.last_autotune_result = status
-        self._notify()
-
     def _set_enabled_runtime(self, enabled: bool) -> None:
         self._enabled = enabled
         self.state.enabled = enabled
         self.state.status = "disabled" if not enabled else self.state.status
         self._notify()
 
-    def _parse_calibration_points(self, raw: str) -> list[tuple[float, float]]:
-        points: list[tuple[float, float]] = []
-        for chunk in raw.replace("\n", ",").split(","):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            sep = ":" if ":" in chunk else "=" if "=" in chunk else None
-            if sep is None:
-                continue
-            left, right = chunk.split(sep, 1)
-            try:
-                command = float(left.strip())
-                opening_cm = float(right.strip())
-            except ValueError:
-                continue
-            points.append((command, opening_cm))
-        points.sort(key=lambda item: item[0])
-        return points
-
-    def _refresh_calibration_points(self, raw: str) -> None:
-        self.calibration_points_raw = raw
-        self._calibration_points = self._parse_calibration_points(raw)
-        self._calibration_max_cm = max((cm for _, cm in self._calibration_points), default=0.0)
-
-    def _invert_calibration(self, desired_cm: float) -> float:
-        if not self._calibration_points or self._calibration_max_cm <= 0:
-            return desired_cm
-
-        by_cm = sorted(self._calibration_points, key=lambda item: item[1])
-        if desired_cm <= by_cm[0][1]:
-            return by_cm[0][0]
-        if desired_cm >= by_cm[-1][1]:
-            return by_cm[-1][0]
-
-        for idx in range(1, len(by_cm)):
-            left_cmd, left_cm = by_cm[idx - 1]
-            right_cmd, right_cm = by_cm[idx]
-            if desired_cm <= right_cm:
-                span = right_cm - left_cm
-                if abs(span) < 1e-6:
-                    return right_cmd
-                ratio = (desired_cm - left_cm) / span
-                return left_cmd + (right_cmd - left_cmd) * ratio
-        return by_cm[-1][0]
-
-    def _apply_calibration(self, desired_output: float) -> float:
-        if not self._calibration_points or self._calibration_max_cm <= 0:
-            return desired_output
-
-        range_width = max(1.0, float(self.max_position - self.min_position))
-        normalized = (desired_output - self.min_position) / range_width
-        normalized = max(0.0, min(1.0, normalized))
-        desired_cm = normalized * self._calibration_max_cm
-        return self._invert_calibration(desired_cm)
-
     def _pid_gains(self) -> tuple[float, float, float]:
         return self.kp, self.ki, self.kd
-
-    def _adaptive_multiplier(self, outdoor_temp: float | None, temperature_trend: float | None) -> float:
-        multiplier = 1.0
-        if outdoor_temp is not None:
-            # If outside is hotter than target, back off opening; if colder, allow more opening.
-            outdoor_delta = self.target_temp - outdoor_temp
-            multiplier += self.adaptive_outdoor_factor * max(-1.0, min(1.0, outdoor_delta / 10.0))
-        if temperature_trend is not None:
-            # Positive trend = room warming up, open more. Negative trend = room cooling down, open less.
-            multiplier += self.adaptive_rate_factor * max(-1.0, min(1.0, temperature_trend / 2.0))
-        return max(0.4, min(1.6, multiplier))
 
     async def _async_tick(self, _event: Event | None) -> None:
         try:
@@ -297,15 +205,12 @@ class PidWindowController:
         cover_position = self._cover_position() if cover_available else None
 
         dt_hours = max(self.update_interval, 15) / 3600.0
-        temperature_trend = None if self._last_temp is None or current_temp is None else (current_temp - self._last_temp) / dt_hours
 
         self.state.current_temp = current_temp
         self.state.outdoor_temp = outdoor_temp
         self.state.cooling_delta = cooling_delta
         self.state.cover_position = cover_position
-        self.state.temperature_trend = temperature_trend
         self.state.enabled = self._enabled
-        self.state.autotune_running = self._autotune_active
 
         if current_temp is None:
             self.state.status = "temp_sensor_unavailable"
@@ -315,19 +220,12 @@ class PidWindowController:
             self._notify()
             return
 
-        if self._autotune_active:
-            self.state.status = "idle"
-            self._notify()
-            return
-
         if not cover_available:
             self.state.status = "cover_unavailable"
             self._notify()
             return
 
         error = current_temp - self.target_temp
-        self.state.error = error
-
         if not self._enabled or self.cooling_mode == COOLING_MODE_DISABLED:
             self._integral = 0.0
             self._previous_error = None
@@ -390,8 +288,6 @@ class PidWindowController:
 
         kp, ki, kd = self._pid_gains()
         output = kp * error + ki * self._integral + kd * derivative
-        outdoor_temp_for_cooling = None if self.cooling_mode == COOLING_MODE_FORCE else outdoor_temp
-        output *= self._adaptive_multiplier(outdoor_temp_for_cooling, temperature_trend)
         output = max(self.min_position, min(self.max_position, output))
 
         # If the temperature is not moving for several cycles, nudge the window open a bit more.
@@ -414,15 +310,11 @@ class PidWindowController:
         await self._set_cover_position(output)
         self._notify()
 
-    async def _set_cover_position(self, position: float, apply_calibration: bool = True) -> None:
+    async def _set_cover_position(self, position: float) -> None:
         if position < self.min_position:
             position = float(self.min_position)
         if position > self.max_position:
             position = float(self.max_position)
-
-        if apply_calibration:
-            position = self._apply_calibration(position)
-            position = max(self.min_position, min(self.max_position, position))
 
         if self._last_sent_position is not None and abs(self._last_sent_position - position) < self.position_change_threshold:
             return
@@ -470,11 +362,6 @@ class PidWindowController:
         await self.async_stop()
         await self.async_start()
 
-    async def async_set_autotune_sample_seconds(self, value: int) -> None:
-        self.autotune_sample_seconds = int(value)
-        self._async_save_option(CONF_AUTOTUNE_SAMPLE_SECONDS, self.autotune_sample_seconds)
-        self._notify()
-
     async def async_set_cooling_delta_threshold(self, value: float) -> None:
         self.cooling_delta_threshold = float(value)
         self._async_save_option(CONF_COOLING_DELTA_THRESHOLD, self.cooling_delta_threshold)
@@ -502,108 +389,6 @@ class PidWindowController:
     async def async_set_position_change_threshold(self, value: float) -> None:
         self.position_change_threshold = float(value)
         self._async_save_option(CONF_POSITION_CHANGE_THRESHOLD, self.position_change_threshold)
-        self._notify()
-        await self._async_tick(None)
-
-    async def async_set_calibration_points(self, value: str) -> None:
-        raw = (value or "").strip()
-        self._refresh_calibration_points(raw)
-        self._async_save_option(CONF_CALIBRATION_POINTS, raw)
-        self._notify()
-        await self._async_tick(None)
-
-    async def async_autotune(self) -> None:
-        if self._autotune_active:
-            return
-        self._autotune_task = self.hass.async_create_task(self._async_autotune_run())
-
-    async def _async_autotune_run(self) -> None:
-        current = self._read_float(self.temp_sensor)
-        outdoor_temp = self._read_float(self.outdoor_sensor) if self.outdoor_sensor else None
-        if current is None:
-            self.state.status = "temp_sensor_unavailable"
-            self.state.last_autotune_result = "autotune_no_temperature"
-            self._notify()
-            return
-
-        current_position = self._cover_position()
-        if current_position is None:
-            current_position = float(self.min_position)
-
-        self._autotune_active = True
-        self._set_enabled_runtime(False)
-        self._integral = 0.0
-        self._previous_error = None
-        self.state.autotune_running = True
-        self._set_autotune_status("autotune_started")
-
-        step_positions = [0.25, 0.5, 0.75, 1.0]
-        total_range = max(1.0, float(self.max_position - self.min_position))
-        targets = [round(self.min_position + total_range * fraction, 1) for fraction in step_positions]
-        targets = [max(self.min_position, min(self.max_position, target)) for target in targets]
-        if all(abs(target - current_position) < 1.0 for target in targets):
-            self._set_autotune_status("autotune_finished_no_room")
-            self._autotune_active = False
-            self.state.autotune_running = False
-            self._set_enabled_runtime(True)
-            self._notify()
-            return
-
-        start_temp = current
-        samples: list[float] = []
-        sample_seconds = max(self.autotune_sample_seconds, self.update_interval * 4)
-        sample_per_step = max(30, sample_seconds // max(1, len(targets)))
-        start_monotonic = self.hass.loop.time()
-
-        for idx, target_position in enumerate(targets, start=1):
-            self._set_autotune_status(f"autotune_step_{idx}_move_{int(round(target_position))}")
-            await self._set_cover_position(target_position)
-            self._set_autotune_status(f"autotune_step_{idx}_sample")
-
-            step_start = self.hass.loop.time()
-            elapsed = 0.0
-            while elapsed < sample_per_step:
-                await asyncio.sleep(max(15, self.update_interval))
-                now = self._read_float(self.temp_sensor)
-                if now is not None:
-                    samples.append(now)
-                    self.state.current_temp = now
-                    self._set_autotune_status(f"autotune_step_{idx}_sample_{len(samples)}")
-                elapsed = self.hass.loop.time() - step_start
-
-        self._set_autotune_status("autotune_step_3_calculating")
-        end_temp = samples[-1] if samples else self._read_float(self.temp_sensor)
-        if end_temp is None:
-            end_temp = start_temp
-
-        delta_pos = (targets[-1] - targets[0]) if len(targets) >= 2 else (targets[0] - current_position)
-        delta_temp = end_temp - start_temp
-        effect = abs(delta_temp) / max(abs(delta_pos), 1.0)
-        intended = (current >= self.target_temp and delta_temp < 0) or (current < self.target_temp and delta_temp > 0)
-        elapsed_hours = max((self.hass.loop.time() - start_monotonic) / 3600.0, 1 / 3600.0)
-
-        if not intended or effect < 0.005:
-            kp = max(self.kp, DEFAULT_KP)
-            ki = max(self.ki, DEFAULT_KI)
-            kd = max(self.kd, DEFAULT_KD)
-            self._set_autotune_status("autotune_finished_noisy")
-        else:
-            kp = max(4.0, min(40.0, 1.5 / max(effect, 0.01)))
-            ki = max(0.03, min(0.8, kp / max(elapsed_hours * 12.0, 8.0)))
-            kd = max(0.0, min(3.0, kp * min(elapsed_hours, 0.5) / 3.0))
-            self._set_autotune_status("autotune_finished")
-
-        self.kp, self.ki, self.kd = kp, ki, kd
-        self._async_save_option(CONF_KP, kp)
-        self._async_save_option(CONF_KI, ki)
-        self._async_save_option(CONF_KD, kd)
-
-        await self._set_cover_position(current_position, apply_calibration=False)
-        self._autotune_active = False
-        self.state.autotune_running = False
-        self._integral = 0.0
-        self._previous_error = None
-        self._set_enabled_runtime(True)
         self._notify()
         await self._async_tick(None)
 
