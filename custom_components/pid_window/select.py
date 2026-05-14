@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-
 from .const import COOLING_MODE_AUTO, COOLING_MODE_DISABLED, COOLING_MODE_FORCE, DOMAIN
 from . import RuntimeData
 
@@ -16,7 +14,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
 
 
 class PidWindowCoolingModeSelect(SelectEntity):
-    _attr_entity_category = EntityCategory.CONFIG
     _attr_options = [COOLING_MODE_DISABLED, COOLING_MODE_FORCE, COOLING_MODE_AUTO]
     _attr_has_entity_name = True
 

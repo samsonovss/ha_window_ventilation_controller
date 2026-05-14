@@ -15,27 +15,26 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
     async_add_entities([
-        PidWindowNumber(controller, entry.entry_id, "target_temp", "Target temperature", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS),
-        PidWindowNumber(controller, entry.entry_id, "update_interval", "Update interval", 15.0, 600.0, 15.0, None),
-        PidWindowNumber(controller, entry.entry_id, "autotune_sample_seconds", "Autotune sample seconds", 60.0, 900.0, 30.0, None),
-        PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", "Cooling delta threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS, NumberMode.SLIDER),
-        PidWindowNumber(controller, entry.entry_id, "cooling_delta_hysteresis", "Cooling delta hysteresis", 0.0, 5.0, 0.5, UnitOfTemperature.CELSIUS, NumberMode.SLIDER),
-        PidWindowNumber(controller, entry.entry_id, "temp_deadband", "Temperature deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS, NumberMode.SLIDER),
-        PidWindowNumber(controller, entry.entry_id, "position_change_threshold", "Position change threshold", 0.0, 10.0, 0.5, "%", NumberMode.SLIDER),
+        PidWindowNumber(controller, entry.entry_id, "target_temp", "Target temperature", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
+        PidWindowNumber(controller, entry.entry_id, "temp_deadband", "Temperature deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
+        PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", "Cooling delta threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "cooling_delta_hysteresis", "Cooling delta hysteresis", 0.0, 5.0, 0.5, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "position_change_threshold", "Position change threshold", 0.0, 10.0, 0.5, "%"),
         PidWindowNumber(controller, entry.entry_id, "kp", "PID Kp", 0.0, 50.0, 0.1, None),
         PidWindowNumber(controller, entry.entry_id, "ki", "PID Ki", 0.0, 5.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "kd", "PID Kd", 0.0, 10.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "adaptive_outdoor_factor", "Adaptive outdoor factor", 0.0, 1.0, 0.01, None),
         PidWindowNumber(controller, entry.entry_id, "adaptive_rate_factor", "Adaptive rate factor", 0.0, 1.0, 0.01, None),
+        PidWindowNumber(controller, entry.entry_id, "update_interval", "Update interval", 15.0, 600.0, 15.0, None),
+        PidWindowNumber(controller, entry.entry_id, "autotune_sample_seconds", "Autotune sample seconds", 60.0, 900.0, 30.0, None),
     ])
 
 
 class PidWindowNumber(NumberEntity):
-    _attr_mode = NumberMode.BOX
-    _attr_entity_category = EntityCategory.CONFIG
+    _attr_mode = NumberMode.SLIDER
     _attr_has_entity_name = True
 
-    def __init__(self, controller, entry_id: str, key: str, name: str, min_value: float, max_value: float, step: float, unit: str | None, mode: NumberMode = NumberMode.BOX) -> None:
+    def __init__(self, controller, entry_id: str, key: str, name: str, min_value: float, max_value: float, step: float, unit: str | None, category=EntityCategory.CONFIG) -> None:
         self._controller = controller
         self._attr_device_info = controller.device_info
         self._key = key
@@ -45,7 +44,7 @@ class PidWindowNumber(NumberEntity):
         self._attr_native_max_value = max_value
         self._attr_native_step = step
         self._attr_native_unit_of_measurement = unit
-        self._attr_mode = mode
+        self._attr_entity_category = category
 
     @property
     def native_value(self):

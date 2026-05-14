@@ -15,14 +15,12 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
     sensors = [
-        PidWindowSensor(controller, entry.entry_id, "current_temp", "Current temperature", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "outdoor_temp", "Outdoor temperature", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "cooling_delta", "Cooling delta", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "cover_position", "Cover position", "%"),
-        PidWindowSensor(controller, entry.entry_id, "pid_output", "PID output", "%"),
-        PidWindowSensor(controller, entry.entry_id, "error", "Temperature error", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "temperature_trend", "Temperature trend", "°C/h"),
         PidWindowSensor(controller, entry.entry_id, "status", "Controller status", None, is_text=True),
+        PidWindowSensor(controller, entry.entry_id, "cooling_delta", "Cooling delta", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "current_temp", "Indoor temperature", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "outdoor_temp", "Outdoor temperature", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "cover_position", "Window position", "%"),
+        PidWindowSensor(controller, entry.entry_id, "pid_output", "PID output", "%"),
     ]
     async_add_entities(sensors)
 
@@ -38,12 +36,12 @@ class PidWindowSensor(SensorEntity):
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_native_unit_of_measurement = unit
         self._remove_listener = controller.register_listener(self._handle_update)
-        if key in {"status", "temperature_trend", "pid_output", "error"}:
+        if key in {"status", "pid_output"}:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        if key in {"current_temp", "outdoor_temp", "cooling_delta", "error"}:
+        if key in {"current_temp", "outdoor_temp", "cooling_delta"}:
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
             self._attr_state_class = SensorStateClass.MEASUREMENT
-        elif key in {"cover_position", "temperature_trend"}:
+        elif key == "cover_position":
             self._attr_state_class = SensorStateClass.MEASUREMENT
 
     async def async_added_to_hass(self) -> None:

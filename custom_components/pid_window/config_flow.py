@@ -121,7 +121,7 @@ def _schema(data: dict | None = None) -> vol.Schema:
 
 
 class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 2
+    VERSION = 3
 
     async def async_step_user(self, user_input=None):
         errors = {}

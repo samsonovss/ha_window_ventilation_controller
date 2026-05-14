@@ -27,7 +27,11 @@ _OLD_ENTITY_UNIQUE_IDS = (
     "summer_ki",
     "summer_kd",
     "active_profile",
+    "error",
+    "temperature_trend",
     "profile_mode",
+    "enabled",
+    "temp_sensor_guard",
     "outdoor_lock_enabled",
     "outdoor_summer_limit",
     "outdoor_lock_threshold",
@@ -44,6 +48,8 @@ _OLD_OPTION_KEYS = (
     "outdoor_summer_limit",
     "outdoor_lock_threshold",
     "enable_outdoor_lock",
+    "enable_temp_sensor_guard",
+    "enabled",
 )
 
 
@@ -66,11 +72,10 @@ def _migrate_pid_options(values: dict, *, fill_defaults: bool = False) -> dict:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old profile-based PID settings to one common PID gain set."""
-    if entry.version < 2:
-        data = _migrate_pid_options(entry.data, fill_defaults=True)
-        options = _migrate_pid_options(entry.options)
-        hass.config_entries.async_update_entry(entry, data=data, options=options, version=2)
+    """Migrate old profile-based PID settings and remove deprecated entities."""
+    data = _migrate_pid_options(entry.data, fill_defaults=True)
+    options = _migrate_pid_options(entry.options)
+    hass.config_entries.async_update_entry(entry, data=data, options=options, version=3)
 
     registry = er.async_get(hass)
     for old_key in _OLD_ENTITY_UNIQUE_IDS:

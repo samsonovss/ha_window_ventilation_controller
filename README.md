@@ -96,17 +96,23 @@ Possible values:
 
 ## Settings / entities
 
-Configuration entities exposed by the integration:
+Home Assistant still exposes tunable values as `number` entities, but they are rendered as sliders where possible.
+
+Main controls:
 
 - `Cooling mode` (`disabled` / `force` / `auto`)
 - `Target temperature`
+- `Enable temperature deadband`
+- `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`
+- `Autotune` button
+
+Configuration:
+
 - `PID Kp`
 - `PID Ki`
 - `PID Kd`
 - `Cooling delta threshold` — default `8 °C`, range `3–20 °C`, step `0.5 °C`
 - `Cooling delta hysteresis` — default `1 °C`, range `0–5 °C`, step `0.5 °C`
-- `Enable temperature deadband` — default `on`
-- `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`
 - `Position change threshold` — default `1%`, range `0–10%`, step `0.5%`
 - `Adaptive outdoor factor`
 - `Adaptive rate factor`
@@ -114,24 +120,21 @@ Configuration entities exposed by the integration:
 - `Autotune sample seconds`
 - `Calibration points`
 
-Diagnostic/live sensors:
+Sensors:
 
-- `Current temperature`
-- `Outdoor temperature`
-- `Cooling delta`
-- `Cover position`
-- `PID output`
-- `Temperature error`
-- `Temperature trend`
 - `Controller status`
+- `Cooling delta`
+- `Indoor temperature`
+- `Outdoor temperature`
+- `Window position`
+- `PID output`
 
-Other entities:
+Removed legacy/debug entities:
 
 - `PID Window Enabled` switch
 - `Temp sensor guard` switch
-- `Enable temperature deadband` switch
-- `Autotune` button
-- `Calibration points` text entity
+- `Temperature error` sensor
+- `Temperature trend` sensor
 
 ## Migration from old PID profiles
 
@@ -148,7 +151,7 @@ On update, the integration migrates old config entries:
 - old `winter_kp / winter_ki / winter_kd` become the new common `PID Kp / PID Ki / PID Kd`
 - if winter values are missing, defaults are used
 - old summer values are ignored
-- deprecated winter/summer entities are removed from the entity registry
+- deprecated winter/summer and old debug/control entities are removed from the entity registry
 
 After update, only the common PID settings should remain visible.
 

@@ -27,7 +27,6 @@ from .const import (
     CONF_KP,
     CONF_COVER_ENTITY,
     CONF_ENABLE_TEMP_DEADBAND,
-    CONF_ENABLE_TEMP_SENSOR_GUARD,
     CONF_MAX_POSITION,
     CONF_MIN_POSITION,
     CONF_OUTDOOR_SENSOR,
@@ -47,7 +46,6 @@ from .const import (
     DEFAULT_KI,
     DEFAULT_KP,
     DEFAULT_ENABLE_TEMP_DEADBAND,
-    DEFAULT_ENABLE_TEMP_SENSOR_GUARD,
     DEFAULT_MAX_POSITION,
     DEFAULT_MIN_POSITION,
     DEFAULT_POSITION_CHANGE_THRESHOLD,
@@ -73,7 +71,6 @@ class ControllerState:
     temperature_trend: float | None = None
     last_autotune_result: str | None = None
     enabled: bool = True
-    temp_sensor_guard_tripped: bool = False
     autotune_running: bool = False
     status: str = "idle"
 
@@ -111,7 +108,6 @@ class PidWindowController:
         self.update_interval = int(options.get(CONF_UPDATE_INTERVAL, data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)))
         self.min_position = int(options.get(CONF_MIN_POSITION, data.get(CONF_MIN_POSITION, DEFAULT_MIN_POSITION)))
         self.max_position = int(options.get(CONF_MAX_POSITION, data.get(CONF_MAX_POSITION, DEFAULT_MAX_POSITION)))
-        self.enable_temp_sensor_guard = bool(options.get(CONF_ENABLE_TEMP_SENSOR_GUARD, data.get(CONF_ENABLE_TEMP_SENSOR_GUARD, DEFAULT_ENABLE_TEMP_SENSOR_GUARD)))
         self.enable_temp_deadband = bool(options.get(CONF_ENABLE_TEMP_DEADBAND, data.get(CONF_ENABLE_TEMP_DEADBAND, DEFAULT_ENABLE_TEMP_DEADBAND)))
         self.temp_deadband = float(options.get(CONF_TEMP_DEADBAND, data.get(CONF_TEMP_DEADBAND, DEFAULT_TEMP_DEADBAND)))
         self.position_change_threshold = float(options.get(CONF_POSITION_CHANGE_THRESHOLD, data.get(CONF_POSITION_CHANGE_THRESHOLD, DEFAULT_POSITION_CHANGE_THRESHOLD)))
@@ -216,30 +212,6 @@ class PidWindowController:
         self.state.status = "disabled" if not enabled else self.state.status
         self._notify()
 
-    def _set_temp_sensor_guard_enabled(self, enabled: bool) -> None:
-        self.enable_temp_sensor_guard = bool(enabled)
-        self._async_save_option(CONF_ENABLE_TEMP_SENSOR_GUARD, self.enable_temp_sensor_guard)
-        self._notify()
-
-    def _parse_calibration_points(self, raw: str) -> list[tuple[float, float]]:
-        points: list[tuple[float, float]] = []
-        for chunk in raw.replace("\n", ",").split(","):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            sep = ":" if ":" in chunk else "=" if "=" in chunk else None
-            if sep is None:
-                continue
-            left, right = chunk.split(sep, 1)
-            try:
-                command = float(left.strip())
-                opening_cm = float(right.strip())
-            except ValueError:
-                continue
-            points.append((command, opening_cm))
-        points.sort(key=lambda item: item[0])
-        return points
-
     def _refresh_calibration_points(self, raw: str) -> None:
         self.calibration_points_raw = raw
         self._calibration_points = self._parse_calibration_points(raw)
@@ -319,20 +291,10 @@ class PidWindowController:
         if current_temp is None:
             self.state.status = "temp_sensor_unavailable"
             self.state.pid_output = float(self.min_position)
-            if self.enable_temp_sensor_guard:
-                self.state.temp_sensor_guard_tripped = True
-                if cover_available:
-                    await self._set_cover_position(float(self.min_position))
-                if self._enabled:
-                    self._set_enabled_runtime(False)
-                self.state.status = "temp_sensor_unavailable"
+            if cover_available:
+                await self._set_cover_position(float(self.min_position))
             self._notify()
             return
-
-        if self.enable_temp_sensor_guard and self.state.temp_sensor_guard_tripped and current_temp is not None:
-            self.state.temp_sensor_guard_tripped = False
-            if not self._enabled:
-                self._set_enabled_runtime(True)
 
         if self._autotune_active:
             self.state.status = "idle"
@@ -459,12 +421,6 @@ class PidWindowController:
         self.state.cover_position = position
         self._notify()
 
-    async def async_set_enabled(self, enabled: bool) -> None:
-        self._set_enabled_runtime(enabled)
-        self._async_save_option("enabled", enabled)
-        if enabled:
-            await self._async_tick(None)
-
     async def async_set_target_temp(self, target_temp: float) -> None:
         self.target_temp = target_temp
         self._async_save_option(CONF_TARGET_TEMP, target_temp)
@@ -499,10 +455,6 @@ class PidWindowController:
         self.autotune_sample_seconds = int(value)
         self._async_save_option(CONF_AUTOTUNE_SAMPLE_SECONDS, self.autotune_sample_seconds)
         self._notify()
-
-    async def async_set_temp_sensor_guard_enabled(self, enabled: bool) -> None:
-        self._set_temp_sensor_guard_enabled(enabled)
-        await self._async_tick(None)
 
     async def async_set_cooling_delta_threshold(self, value: float) -> None:
         self.cooling_delta_threshold = float(value)
