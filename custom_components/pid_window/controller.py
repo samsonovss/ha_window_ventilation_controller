@@ -212,6 +212,25 @@ class PidWindowController:
         self.state.status = "disabled" if not enabled else self.state.status
         self._notify()
 
+    def _parse_calibration_points(self, raw: str) -> list[tuple[float, float]]:
+        points: list[tuple[float, float]] = []
+        for chunk in raw.replace("\n", ",").split(","):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            sep = ":" if ":" in chunk else "=" if "=" in chunk else None
+            if sep is None:
+                continue
+            left, right = chunk.split(sep, 1)
+            try:
+                command = float(left.strip())
+                opening_cm = float(right.strip())
+            except ValueError:
+                continue
+            points.append((command, opening_cm))
+        points.sort(key=lambda item: item[0])
+        return points
+
     def _refresh_calibration_points(self, raw: str) -> None:
         self.calibration_points_raw = raw
         self._calibration_points = self._parse_calibration_points(raw)
