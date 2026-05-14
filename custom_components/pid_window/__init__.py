@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN, DEFAULT_KD, DEFAULT_KI, DEFAULT_KP
 from .controller import PidWindowController
@@ -42,6 +43,46 @@ _OLD_ENTITY_UNIQUE_IDS = (
     "calibration_points",
     "autotune",
 )
+
+_ENTITY_CATEGORY_BY_UNIQUE_KEY = {
+    "target_temp": None,
+    "cooling_mode": None,
+    "current_temp": None,
+    "outdoor_temp": None,
+    "error": None,
+    "cover_position": None,
+    "status": None,
+    "temp_deadband": EntityCategory.CONFIG,
+    "cooling_delta_threshold": EntityCategory.CONFIG,
+    "cooling_delta_hysteresis": EntityCategory.CONFIG,
+    "position_change_threshold": EntityCategory.CONFIG,
+    "kp": EntityCategory.CONFIG,
+    "ki": EntityCategory.CONFIG,
+    "kd": EntityCategory.CONFIG,
+    "update_interval": EntityCategory.CONFIG,
+    "cooling_delta": EntityCategory.DIAGNOSTIC,
+    "pid_output": EntityCategory.DIAGNOSTIC,
+}
+
+_ENTITY_DOMAIN_BY_UNIQUE_KEY = {
+    "target_temp": "number",
+    "temp_deadband": "number",
+    "cooling_delta_threshold": "number",
+    "cooling_delta_hysteresis": "number",
+    "position_change_threshold": "number",
+    "kp": "number",
+    "ki": "number",
+    "kd": "number",
+    "update_interval": "number",
+    "cooling_mode": "select",
+    "status": "sensor",
+    "cooling_delta": "sensor",
+    "error": "sensor",
+    "current_temp": "sensor",
+    "outdoor_temp": "sensor",
+    "cover_position": "sensor",
+    "pid_output": "sensor",
+}
 
 _OLD_OPTION_KEYS = (
     "profile_mode",
@@ -102,7 +143,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old profile-based PID settings and remove deprecated entities."""
     data = _migrate_pid_options(entry.data, fill_defaults=True)
     options = _migrate_pid_options(entry.options)
-    hass.config_entries.async_update_entry(entry, data=data, options=options, version=6)
+    hass.config_entries.async_update_entry(entry, data=data, options=options, version=7)
 
     registry = er.async_get(hass)
     for old_key in _OLD_ENTITY_UNIQUE_IDS:
@@ -111,6 +152,20 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if entity_id is not None:
                 registry.async_remove(entity_id)
                 break
+
+    # Existing installations may have stale categories from previous versions.
+    # Keep the main dashboard short: target/mode/live values/status are primary;
+    # tuning values are config; low-level PID output/cooling delta are diagnostic.
+    for unique_key, category in _ENTITY_CATEGORY_BY_UNIQUE_KEY.items():
+        domain = _ENTITY_DOMAIN_BY_UNIQUE_KEY[unique_key]
+        entity_id = registry.async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{unique_key}")
+        if entity_id is None:
+            continue
+        try:
+            registry.async_update_entity(entity_id, entity_category=category)
+        except TypeError:
+            # Older HA versions may not support entity_category updates in migration.
+            pass
 
     return True
 

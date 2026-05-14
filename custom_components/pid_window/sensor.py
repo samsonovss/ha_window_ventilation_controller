@@ -31,7 +31,7 @@ class PidWindowSensor(SensorEntity):
         self._controller = controller
         self._key = key
         self._is_text = is_text
-        self._attr_has_entity_name = True
+        self._attr_has_entity_name = False
         self._attr_device_info = controller.device_info
         self._attr_translation_key = key
         self._attr_unique_id = f"{entry_id}_{key}"

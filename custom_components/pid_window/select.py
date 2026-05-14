@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
 
 class PidWindowCoolingModeSelect(SelectEntity):
     _attr_options = [COOLING_MODE_DISABLED, COOLING_MODE_FORCE, COOLING_MODE_AUTO]
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(self, controller, entry_id: str) -> None:
         self._controller = controller
