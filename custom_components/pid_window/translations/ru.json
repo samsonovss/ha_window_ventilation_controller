@@ -25,6 +25,40 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Настройка PID-контроллера окна",
+        "data": {
+          "name": "Название",
+          "temp_sensor": "Датчик температуры в комнате",
+          "cover_entity": "Окно/привод",
+          "outdoor_sensor": "Датчик температуры на улице",
+          "target_temp": "Целевая температура",
+          "kp": "Пропорциональная зона",
+          "ki": "Время интегрирования",
+          "kd": "Время дифференцирования",
+          "cooling_mode": "Режим охлаждения",
+          "cooling_delta_threshold": "Порог разницы температур",
+          "cooling_delta_hysteresis": "Гистерезис разницы температур",
+          "temp_deadband": "Мёртвая зона температуры",
+          "position_change_threshold": "Порог изменения положения",
+          "update_interval": "Интервал обновления (секунды)",
+          "min_position": "Минимальное положение окна",
+          "max_position": "Максимальное положение окна"
+        }
+      }
+    }
+  },
+  "selector": {
+    "cooling_mode": {
+      "options": {
+        "disabled": "Выключено",
+        "force": "Принудительно",
+        "auto": "Авто"
+      }
+    }
+  },
   "entity": {
     "select": {
       "cooling_mode": {

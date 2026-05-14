@@ -15,23 +15,23 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
     async_add_entities([
-        PidWindowNumber(controller, entry.entry_id, "target_temp", "Target temperature", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
-        PidWindowNumber(controller, entry.entry_id, "temp_deadband", "Temperature deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
-        PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", "Cooling delta threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS),
-        PidWindowNumber(controller, entry.entry_id, "cooling_delta_hysteresis", "Cooling delta hysteresis", 0.0, 5.0, 0.5, UnitOfTemperature.CELSIUS),
-        PidWindowNumber(controller, entry.entry_id, "position_change_threshold", "Position change threshold", 0.0, 10.0, 0.5, "%"),
-        PidWindowNumber(controller, entry.entry_id, "kp", "Proportional band", 0.0, 50.0, 0.1, UnitOfTemperature.CELSIUS),
-        PidWindowNumber(controller, entry.entry_id, "ki", "Integral time", 0.0, 7200.0, 30.0, "s"),
-        PidWindowNumber(controller, entry.entry_id, "kd", "Derivative time", 0.0, 1800.0, 30.0, "s"),
-        PidWindowNumber(controller, entry.entry_id, "update_interval", "Update interval", 15.0, 600.0, 15.0, None),
+        PidWindowNumber(controller, entry.entry_id, "target_temp", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
+        PidWindowNumber(controller, entry.entry_id, "temp_deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "cooling_delta_hysteresis", 0.0, 5.0, 0.5, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "position_change_threshold", 0.0, 10.0, 0.5, "%"),
+        PidWindowNumber(controller, entry.entry_id, "kp", 0.0, 50.0, 0.1, UnitOfTemperature.CELSIUS),
+        PidWindowNumber(controller, entry.entry_id, "ki", 0.0, 7200.0, 30.0, "s"),
+        PidWindowNumber(controller, entry.entry_id, "kd", 0.0, 1800.0, 30.0, "s"),
+        PidWindowNumber(controller, entry.entry_id, "update_interval", 15.0, 600.0, 15.0, None),
     ])
 
 
 class PidWindowNumber(NumberEntity):
     _attr_mode = NumberMode.SLIDER
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
 
-    def __init__(self, controller, entry_id: str, key: str, name: str, min_value: float, max_value: float, step: float, unit: str | None, category=EntityCategory.CONFIG) -> None:
+    def __init__(self, controller, entry_id: str, key: str, min_value: float, max_value: float, step: float, unit: str | None, category=EntityCategory.CONFIG) -> None:
         self._controller = controller
         self._attr_device_info = controller.device_info
         self._key = key

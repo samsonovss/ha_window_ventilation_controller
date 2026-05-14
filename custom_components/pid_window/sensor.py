@@ -15,23 +15,23 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
     sensors = [
-        PidWindowSensor(controller, entry.entry_id, "status", "Controller status", None, is_text=True),
-        PidWindowSensor(controller, entry.entry_id, "cooling_delta", "Cooling delta", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "error", "Temperature error", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "current_temp", "Indoor temperature", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "outdoor_temp", "Outdoor temperature", UnitOfTemperature.CELSIUS),
-        PidWindowSensor(controller, entry.entry_id, "cover_position", "Window position", "%"),
-        PidWindowSensor(controller, entry.entry_id, "pid_output", "PID output", "%"),
+        PidWindowSensor(controller, entry.entry_id, "status", None, is_text=True),
+        PidWindowSensor(controller, entry.entry_id, "cooling_delta", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "error", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "current_temp", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "outdoor_temp", UnitOfTemperature.CELSIUS),
+        PidWindowSensor(controller, entry.entry_id, "cover_position", "%"),
+        PidWindowSensor(controller, entry.entry_id, "pid_output", "%"),
     ]
     async_add_entities(sensors)
 
 
 class PidWindowSensor(SensorEntity):
-    def __init__(self, controller, entry_id: str, key: str, name: str, unit: str | None, is_text: bool = False) -> None:
+    def __init__(self, controller, entry_id: str, key: str, unit: str | None, is_text: bool = False) -> None:
         self._controller = controller
         self._key = key
         self._is_text = is_text
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         self._attr_device_info = controller.device_info
         self._attr_translation_key = key
         self._attr_unique_id = f"{entry_id}_{key}"

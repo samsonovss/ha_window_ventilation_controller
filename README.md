@@ -160,7 +160,9 @@ Copy `custom_components/pid_window` to `/config/custom_components/pid_window` an
 
 ## Languages
 
-The integration includes English and Russian translations for config flow, entity names, select options, and status values.
+The integration includes English and Russian translations for config flow, options flow, entity names, select options, and status values.
+
+Translation files are stored in `custom_components/pid_window/translations/en.json` and `custom_components/pid_window/translations/ru.json`, as expected by Home Assistant custom integrations.
 
 ## Notes
 

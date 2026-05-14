@@ -25,6 +25,40 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure PID Window Controller",
+        "data": {
+          "name": "Name",
+          "temp_sensor": "Indoor temperature sensor",
+          "cover_entity": "Window/cover entity",
+          "outdoor_sensor": "Outdoor temperature sensor",
+          "target_temp": "Target temperature",
+          "kp": "Proportional band",
+          "ki": "Integral time",
+          "kd": "Derivative time",
+          "cooling_mode": "Cooling mode",
+          "cooling_delta_threshold": "Cooling delta threshold",
+          "cooling_delta_hysteresis": "Cooling delta hysteresis",
+          "temp_deadband": "Temperature deadband",
+          "position_change_threshold": "Position change threshold",
+          "update_interval": "Update interval (seconds)",
+          "min_position": "Minimum cover position",
+          "max_position": "Maximum cover position"
+        }
+      }
+    }
+  },
+  "selector": {
+    "cooling_mode": {
+      "options": {
+        "disabled": "Disabled",
+        "force": "Force",
+        "auto": "Auto"
+      }
+    }
+  },
   "entity": {
     "select": {
       "cooling_mode": {
