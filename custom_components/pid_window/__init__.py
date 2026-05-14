@@ -49,7 +49,7 @@ _ENTITY_CATEGORY_BY_UNIQUE_KEY = {
     "cooling_mode": None,
     "current_temp": None,
     "outdoor_temp": None,
-    "error": EntityCategory.DIAGNOSTIC,
+    "error": None,
     "cover_position": None,
     "status": None,
     "temp_deadband": EntityCategory.CONFIG,
@@ -60,7 +60,7 @@ _ENTITY_CATEGORY_BY_UNIQUE_KEY = {
     "ki": EntityCategory.CONFIG,
     "kd": EntityCategory.CONFIG,
     "update_interval": EntityCategory.CONFIG,
-    "cooling_delta": None,
+    "cooling_delta": EntityCategory.DIAGNOSTIC,
     "pid_output": EntityCategory.DIAGNOSTIC,
 }
 
