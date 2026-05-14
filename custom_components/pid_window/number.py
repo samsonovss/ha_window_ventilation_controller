@@ -16,7 +16,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
     controller = runtime.controller
     async_add_entities([
         PidWindowNumber(controller, entry.entry_id, "target_temp", "Target temperature", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
-        PidWindowNumber(controller, entry.entry_id, "temp_deadband", "Temperature deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
+        PidWindowNumber(controller, entry.entry_id, "temp_deadband", "Temperature deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
         PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", "Cooling delta threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS),
         PidWindowNumber(controller, entry.entry_id, "cooling_delta_hysteresis", "Cooling delta hysteresis", 0.0, 5.0, 0.5, UnitOfTemperature.CELSIUS),
         PidWindowNumber(controller, entry.entry_id, "position_change_threshold", "Position change threshold", 0.0, 10.0, 0.5, "%"),
@@ -35,7 +35,7 @@ class PidWindowNumber(NumberEntity):
         self._controller = controller
         self._attr_device_info = controller.device_info
         self._key = key
-        self._attr_name = name
+        self._attr_translation_key = key
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_native_min_value = min_value
         self._attr_native_max_value = max_value

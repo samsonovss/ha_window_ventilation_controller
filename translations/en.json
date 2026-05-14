@@ -24,5 +24,51 @@
         }
       }
     }
+  },
+  "entity": {
+    "select": {
+      "cooling_mode": {
+        "name": "Cooling mode",
+        "state": {
+          "disabled": "Disabled",
+          "force": "Force",
+          "auto": "Auto"
+        }
+      }
+    },
+    "number": {
+      "target_temp": { "name": "Target temperature" },
+      "temp_deadband": { "name": "Temperature deadband" },
+      "cooling_delta_threshold": { "name": "Cooling delta threshold" },
+      "cooling_delta_hysteresis": { "name": "Cooling delta hysteresis" },
+      "position_change_threshold": { "name": "Position change threshold" },
+      "kp": { "name": "Proportional band" },
+      "ki": { "name": "Integral time" },
+      "kd": { "name": "Derivative time" },
+      "update_interval": { "name": "Update interval" }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "disabled": "Disabled",
+          "cooling": "Cooling",
+          "deadband": "Deadband",
+          "auto_blocked_by_delta": "Blocked by cooling delta",
+          "outdoor_sensor_unavailable": "Outdoor sensor unavailable",
+          "temp_sensor_unavailable": "Indoor sensor unavailable",
+          "cover_unavailable": "Cover unavailable",
+          "idle": "Idle",
+          "integral_locked": "Integral locked",
+          "error": "Error"
+        }
+      },
+      "cooling_delta": { "name": "Cooling delta" },
+      "error": { "name": "Temperature error" },
+      "current_temp": { "name": "Indoor temperature" },
+      "outdoor_temp": { "name": "Outdoor temperature" },
+      "cover_position": { "name": "Window position" },
+      "pid_output": { "name": "PID output" }
+    }
   }
 }

@@ -20,7 +20,7 @@ class PidWindowCoolingModeSelect(SelectEntity):
     def __init__(self, controller, entry_id: str) -> None:
         self._controller = controller
         self._attr_device_info = controller.device_info
-        self._attr_name = "Cooling mode"
+        self._attr_translation_key = "cooling_mode"
         self._attr_unique_id = f"{entry_id}_cooling_mode"
         self._remove_listener = controller.register_listener(self._handle_update)
 

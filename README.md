@@ -113,10 +113,15 @@ Main controls:
 
 - `Cooling mode` (`disabled` / `force` / `auto`)
 - `Target temperature`
-- `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`; set `0` to disable
+- `Temperature error`
+- `Indoor temperature`
+- `Outdoor temperature`
+- `Window position`
+- `Controller status`
 
 Configuration:
 
+- `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`; set `0` to disable
 - `Proportional band` — Node-RED-style proportional band in °C; smaller means more aggressive
 - `Integral time` — Node-RED-style integral time in seconds; larger means slower integral action
 - `Derivative time` — Node-RED-style derivative time in seconds; `0` disables derivative action
@@ -125,14 +130,9 @@ Configuration:
 - `Position change threshold` — default `1%`, range `0–10%`, step `0.5%`
 - `Update interval`
 
-Sensors:
+Diagnostic sensors:
 
-- `Controller status`
 - `Cooling delta`
-- `Temperature error`
-- `Indoor temperature`
-- `Outdoor temperature`
-- `Window position`
 - `PID output`
 
 Removed legacy/debug entities:
@@ -157,6 +157,10 @@ Removed legacy/debug entities:
 ### Manual installation
 
 Copy `custom_components/pid_window` to `/config/custom_components/pid_window` and restart Home Assistant.
+
+## Languages
+
+The integration includes English and Russian translations for config flow, entity names, select options, and status values.
 
 ## Notes
 

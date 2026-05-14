@@ -1,0 +1,74 @@
+{
+  "title": "PID-контроллер окна",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Настройка PID-контроллера окна",
+        "data": {
+          "name": "Название",
+          "temp_sensor": "Датчик температуры в комнате",
+          "cover_entity": "Окно/привод",
+          "outdoor_sensor": "Датчик температуры на улице",
+          "target_temp": "Целевая температура",
+          "kp": "Пропорциональная зона",
+          "ki": "Время интегрирования",
+          "kd": "Время дифференцирования",
+          "cooling_mode": "Режим охлаждения",
+          "cooling_delta_threshold": "Порог разницы температур",
+          "cooling_delta_hysteresis": "Гистерезис разницы температур",
+          "temp_deadband": "Мёртвая зона температуры",
+          "position_change_threshold": "Порог изменения положения",
+          "update_interval": "Интервал обновления (секунды)",
+          "min_position": "Минимальное положение окна",
+          "max_position": "Максимальное положение окна"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "cooling_mode": {
+        "name": "Режим",
+        "state": {
+          "disabled": "Выключено",
+          "force": "Принудительно",
+          "auto": "Авто"
+        }
+      }
+    },
+    "number": {
+      "target_temp": { "name": "Цель" },
+      "temp_deadband": { "name": "Мёртвая зона" },
+      "cooling_delta_threshold": { "name": "Порог разницы" },
+      "cooling_delta_hysteresis": { "name": "Гистерезис разницы" },
+      "position_change_threshold": { "name": "Порог движения окна" },
+      "kp": { "name": "Пропорциональная зона" },
+      "ki": { "name": "Время интегрирования" },
+      "kd": { "name": "Время дифференцирования" },
+      "update_interval": { "name": "Интервал обновления" }
+    },
+    "sensor": {
+      "status": {
+        "name": "Статус",
+        "state": {
+          "disabled": "Выключено",
+          "cooling": "Охлаждение",
+          "deadband": "Мёртвая зона",
+          "auto_blocked_by_delta": "Заблокировано по разнице",
+          "outdoor_sensor_unavailable": "Нет датчика улицы",
+          "temp_sensor_unavailable": "Нет датчика комнаты",
+          "cover_unavailable": "Окно недоступно",
+          "idle": "Ожидание",
+          "integral_locked": "Интеграл заблокирован",
+          "error": "Ошибка"
+        }
+      },
+      "cooling_delta": { "name": "Разница с улицей" },
+      "error": { "name": "Разница" },
+      "current_temp": { "name": "Температура" },
+      "outdoor_temp": { "name": "Улица" },
+      "cover_position": { "name": "Окно" },
+      "pid_output": { "name": "Выход PID" }
+    }
+  }
+}
