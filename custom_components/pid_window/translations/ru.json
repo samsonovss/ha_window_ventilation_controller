@@ -57,6 +57,14 @@
         "force": "Принудительно",
         "auto": "Авто"
       }
+    },
+    "pid_profile": {
+      "options": {
+        "soft": "Мягкий",
+        "normal": "Нормальный",
+        "aggressive": "Агрессивный",
+        "manual": "Ручной"
+      }
     }
   },
   "entity": {
@@ -67,6 +75,15 @@
           "disabled": "Выключено",
           "force": "Принудительно",
           "auto": "Авто"
+        }
+      },
+      "pid_profile": {
+        "name": "Профиль PID",
+        "state": {
+          "soft": "Мягкий",
+          "normal": "Нормальный",
+          "aggressive": "Агрессивный",
+          "manual": "Ручной"
         }
       }
     },

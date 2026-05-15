@@ -19,6 +19,7 @@ from .const import (
     CONF_KD,
     CONF_KI,
     CONF_KP,
+    CONF_PID_PROFILE,
     CONF_COVER_ENTITY,
     CONF_MAX_POSITION,
     CONF_MIN_POSITION,
@@ -34,6 +35,7 @@ from .const import (
     DEFAULT_KD,
     DEFAULT_KI,
     DEFAULT_KP,
+    DEFAULT_PID_PROFILE,
     DEFAULT_MAX_POSITION,
     DEFAULT_MIN_POSITION,
     DEFAULT_POSITION_CHANGE_THRESHOLD,
@@ -43,6 +45,11 @@ from .const import (
     COOLING_MODE_AUTO,
     COOLING_MODE_DISABLED,
     COOLING_MODE_FORCE,
+    PID_PROFILE_AGGRESSIVE,
+    PID_PROFILE_MANUAL,
+    PID_PROFILE_NORMAL,
+    PID_PROFILE_PRESETS,
+    PID_PROFILE_SOFT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,6 +100,13 @@ class PidWindowController:
         self.position_change_threshold = float(options.get(CONF_POSITION_CHANGE_THRESHOLD, data.get(CONF_POSITION_CHANGE_THRESHOLD, DEFAULT_POSITION_CHANGE_THRESHOLD)))
         self.cooling_delta_threshold = float(options.get(CONF_COOLING_DELTA_THRESHOLD, data.get(CONF_COOLING_DELTA_THRESHOLD, DEFAULT_COOLING_DELTA_THRESHOLD)))
         self.cooling_delta_hysteresis = float(options.get(CONF_COOLING_DELTA_HYSTERESIS, data.get(CONF_COOLING_DELTA_HYSTERESIS, DEFAULT_COOLING_DELTA_HYSTERESIS)))
+        configured_pid_profile = options.get(CONF_PID_PROFILE, data.get(CONF_PID_PROFILE))
+        if configured_pid_profile is None:
+            self.pid_profile = self._matching_pid_profile()
+        else:
+            self.pid_profile = str(configured_pid_profile)
+            if self.pid_profile not in {PID_PROFILE_MANUAL, PID_PROFILE_SOFT, PID_PROFILE_NORMAL, PID_PROFILE_AGGRESSIVE}:
+                self.pid_profile = PID_PROFILE_MANUAL
 
         self.state = ControllerState()
         self._listeners: list[Callable[[], None]] = []
@@ -128,6 +142,22 @@ class PidWindowController:
     def _async_save_option(self, key: str, value: Any) -> None:
         options = {**self.entry.options, key: value}
         self.hass.config_entries.async_update_entry(self.entry, options=options)
+
+    def _async_save_options(self, values: dict[str, Any]) -> None:
+        options = {**self.entry.options, **values}
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+
+    def _matching_pid_profile(self) -> str:
+        current = {
+            CONF_KP: self.kp,
+            CONF_KI: self.ki,
+            CONF_KD: self.kd,
+            CONF_POSITION_CHANGE_THRESHOLD: self.position_change_threshold,
+        }
+        for profile, preset in PID_PROFILE_PRESETS.items():
+            if all(abs(float(current[key]) - float(preset[key])) < 0.0001 for key in current):
+                return profile
+        return PID_PROFILE_MANUAL
 
     async def async_stop(self) -> None:
         if self._unsub_interval:
@@ -383,9 +413,29 @@ class PidWindowController:
     async def async_set_profile_mode(self, mode: str) -> None:
         await self.async_set_cooling_mode(mode)
 
+    async def async_set_pid_profile(self, profile: str) -> None:
+        if profile == PID_PROFILE_MANUAL:
+            self.pid_profile = PID_PROFILE_MANUAL
+            self._async_save_option(CONF_PID_PROFILE, PID_PROFILE_MANUAL)
+            self._notify()
+            return
+        if profile not in PID_PROFILE_PRESETS:
+            profile = DEFAULT_PID_PROFILE
+
+        preset = PID_PROFILE_PRESETS[profile]
+        self.kp = float(preset[CONF_KP])
+        self.ki = float(preset[CONF_KI])
+        self.kd = float(preset[CONF_KD])
+        self.position_change_threshold = float(preset[CONF_POSITION_CHANGE_THRESHOLD])
+        self.pid_profile = profile
+        self._async_save_options({**preset, CONF_PID_PROFILE: profile})
+        self._notify()
+        await self._async_tick(None)
+
     async def async_set_gain(self, key: str, value: float) -> None:
         setattr(self, key, value)
-        self._async_save_option(key, value)
+        self.pid_profile = PID_PROFILE_MANUAL
+        self._async_save_options({key: value, CONF_PID_PROFILE: PID_PROFILE_MANUAL})
         self._notify()
         await self._async_tick(None)
 
@@ -415,7 +465,13 @@ class PidWindowController:
 
     async def async_set_position_change_threshold(self, value: float) -> None:
         self.position_change_threshold = float(value)
-        self._async_save_option(CONF_POSITION_CHANGE_THRESHOLD, self.position_change_threshold)
+        self.pid_profile = PID_PROFILE_MANUAL
+        self._async_save_options(
+            {
+                CONF_POSITION_CHANGE_THRESHOLD: self.position_change_threshold,
+                CONF_PID_PROFILE: PID_PROFILE_MANUAL,
+            }
+        )
         self._notify()
         await self._async_tick(None)
 

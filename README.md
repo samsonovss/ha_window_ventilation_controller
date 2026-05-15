@@ -124,6 +124,11 @@ Main controls:
 
 Configuration:
 
+- `PID profile` — applies PID tuning presets:
+  - `soft`: proportional band `10 °C`, integral time `5400 s`, derivative time `0 s`, position change threshold `2%`
+  - `normal`: proportional band `6 °C`, integral time `3600 s`, derivative time `0 s`, position change threshold `1%`
+  - `aggressive`: proportional band `4 °C`, integral time `1800 s`, derivative time `0 s`, position change threshold `0.5%`
+  - `manual`: shown when PID tuning values are changed directly
 - `Temperature deadband` — default `0.5 °C`, range `0–2 °C`, step `0.1 °C`; set `0` to disable
 - `Proportional band` — default `6 °C`; Node-RED-style proportional band in °C; smaller means more aggressive
 - `Integral time` — Node-RED-style integral time in seconds; larger means slower integral action

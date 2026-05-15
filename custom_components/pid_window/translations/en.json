@@ -57,6 +57,14 @@
         "force": "Force",
         "auto": "Auto"
       }
+    },
+    "pid_profile": {
+      "options": {
+        "soft": "Soft",
+        "normal": "Normal",
+        "aggressive": "Aggressive",
+        "manual": "Manual"
+      }
     }
   },
   "entity": {
@@ -67,6 +75,15 @@
           "disabled": "Disabled",
           "force": "Force",
           "auto": "Auto"
+        }
+      },
+      "pid_profile": {
+        "name": "PID profile",
+        "state": {
+          "soft": "Soft",
+          "normal": "Normal",
+          "aggressive": "Aggressive",
+          "manual": "Manual"
         }
       }
     },

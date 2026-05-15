@@ -47,6 +47,7 @@ _OLD_ENTITY_UNIQUE_IDS = (
 _ENTITY_CATEGORY_BY_UNIQUE_KEY = {
     "target_temp": None,
     "cooling_mode": None,
+    "pid_profile": EntityCategory.CONFIG,
     "current_temp": None,
     "outdoor_temp": None,
     "error": None,
@@ -76,6 +77,7 @@ _ENTITY_DOMAIN_BY_UNIQUE_KEY = {
     "kd": "number",
     "update_interval": "number",
     "cooling_mode": "select",
+    "pid_profile": "select",
     "status": "sensor",
     "cooling_delta": "sensor",
     "error": "sensor",
