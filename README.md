@@ -26,7 +26,7 @@ The integration is designed for cooling a room with outside air: it reads indoor
 The controller is disabled.
 
 - PID does not run
-- the integration does not move the window automatically
+- window is moved to `Minimum cover position`
 - the proxy cover slider can still be used for manual control
 - `Controller status = disabled`
 

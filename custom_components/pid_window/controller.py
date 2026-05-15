@@ -208,15 +208,6 @@ class PidWindowController:
         self.state.cover_position = cover_position
         self.state.enabled = self._enabled
 
-        if not self._enabled or self.cooling_mode == COOLING_MODE_DISABLED:
-            self._integral = 0.0
-            self._previous_error = None
-            self._last_temp = current_temp
-            self.state.pid_output = float(self.min_position)
-            self.state.status = "disabled"
-            self._notify()
-            return
-
         if current_temp is None:
             self.state.status = "temp_sensor_unavailable"
             self.state.pid_output = float(self.min_position)
@@ -232,6 +223,16 @@ class PidWindowController:
 
         error = current_temp - self.target_temp
         self.state.error = error
+        if not self._enabled or self.cooling_mode == COOLING_MODE_DISABLED:
+            self._integral = 0.0
+            self._previous_error = None
+            self._last_temp = current_temp
+            self.state.pid_output = float(self.min_position)
+            self.state.status = "disabled"
+            await self._set_cover_position(float(self.min_position), force=True)
+            self._notify()
+            return
+
         if self.cooling_mode == COOLING_MODE_AUTO:
             if cooling_delta is None:
                 self._cooling_pid_allowed = False
