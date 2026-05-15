@@ -56,21 +56,27 @@ def _base_schema(data: dict | None = None) -> dict:
     data = data or {}
     return {
         vol.Required(CONF_NAME, default=data.get(CONF_NAME, DEFAULT_NAME)): str,
-        vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="sensor")
-        ),
-        vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="cover")
-        ),
     }
 
 
 def _options_schema(data: dict | None = None) -> dict:
     data = data or {}
     return {
+        vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="sensor")
+        ),
+        vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="cover")
+        ),
         vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR, "")): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor")
         ),
+    }
+
+
+def _control_schema(data: dict | None = None) -> dict:
+    data = data or {}
+    return {
         vol.Required(CONF_TARGET_TEMP, default=data.get(CONF_TARGET_TEMP, DEFAULT_TARGET_TEMP)): selector.NumberSelector(
             selector.NumberSelectorConfig(min=16, max=30, step=0.1, mode=selector.NumberSelectorMode.BOX)
         ),
@@ -115,7 +121,7 @@ def _options_schema(data: dict | None = None) -> dict:
 
 
 def _schema(data: dict | None = None) -> vol.Schema:
-    return vol.Schema({**_base_schema(data), **_options_schema(data)})
+    return vol.Schema({**_base_schema(data), **_options_schema(data), **_control_schema(data)})
 
 
 def _config_options_schema(data: dict | None = None) -> vol.Schema:

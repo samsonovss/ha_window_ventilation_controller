@@ -69,8 +69,8 @@ class PidWindowController:
         data = entry.data
         options = entry.options
 
-        self.temp_sensor = data[CONF_TEMP_SENSOR]
-        self.cover_entity = data[CONF_COVER_ENTITY]
+        self.temp_sensor = options.get(CONF_TEMP_SENSOR, data[CONF_TEMP_SENSOR])
+        self.cover_entity = options.get(CONF_COVER_ENTITY, data[CONF_COVER_ENTITY])
         self.outdoor_sensor = options.get(CONF_OUTDOOR_SENSOR, data.get(CONF_OUTDOOR_SENSOR)) or None
         self.cooling_mode = str(
             options.get(
