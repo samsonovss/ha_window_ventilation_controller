@@ -29,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
 
 class PidWindowNumber(NumberEntity):
     _attr_mode = NumberMode.SLIDER
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
 
     def __init__(self, controller, entry_id: str, key: str, min_value: float, max_value: float, step: float, unit: str | None, category=EntityCategory.CONFIG) -> None:
         self._controller = controller
