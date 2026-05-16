@@ -264,6 +264,7 @@ class PidWindowController:
         self.state.current_temp = current_temp
         self.state.outdoor_temp = outdoor_temp
         self.state.cooling_delta = cooling_delta
+        self.state.error = None if current_temp is None else current_temp - self.target_temp
         self.state.cover_position = cover_position
         self.state.enabled = self._enabled
 
@@ -291,8 +292,7 @@ class PidWindowController:
             self._notify()
             return
 
-        error = current_temp - self.target_temp
-        self.state.error = error
+        error = self.state.error
         if not self._enabled or self.cooling_mode == COOLING_MODE_DISABLED:
             self._integral = 0.0
             self._previous_error = None
