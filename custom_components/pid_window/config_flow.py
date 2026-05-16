@@ -5,7 +5,7 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
 
 from .const import (
@@ -26,24 +26,30 @@ def _normalize_options(data: dict) -> dict:
     return normalized
 
 
-def _optional_entity_key(key: str, data: dict) -> vol.Optional:
-    value = data.get(key)
-    if value:
-        return vol.Optional(key, default=value)
-    return vol.Optional(key)
+def _ac_options(hass: HomeAssistant, data: dict) -> list[dict[str, str]]:
+    options = [{"value": "", "label": "-"}]
+    entity_ids = sorted(hass.states.async_entity_ids("climate"))
+    current = data.get(CONF_AC_CLIMATE_ENTITY)
+    if current and current not in entity_ids:
+        entity_ids.insert(0, current)
+    options.extend({"value": entity_id, "label": entity_id} for entity_id in entity_ids)
+    return options
 
 
-def _options_schema(data: dict | None = None) -> dict:
+def _options_schema(hass: HomeAssistant, data: dict | None = None) -> dict:
     data = data or {}
     return {
         vol.Required(CONF_TEMP_SENSOR, default=data.get(CONF_TEMP_SENSOR, "")): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor")
         ),
-        _optional_entity_key(CONF_OUTDOOR_SENSOR, data): selector.EntitySelector(
+        vol.Optional(CONF_OUTDOOR_SENSOR, default=data.get(CONF_OUTDOOR_SENSOR, "")): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor")
         ),
-        _optional_entity_key(CONF_AC_CLIMATE_ENTITY, data): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="climate")
+        vol.Optional(CONF_AC_CLIMATE_ENTITY, default=data.get(CONF_AC_CLIMATE_ENTITY, "")): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=_ac_options(hass, data),
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
         ),
         vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="cover")
@@ -51,12 +57,12 @@ def _options_schema(data: dict | None = None) -> dict:
     }
 
 
-def _schema(data: dict | None = None) -> vol.Schema:
-    return vol.Schema(_options_schema(data))
+def _schema(hass: HomeAssistant, data: dict | None = None) -> vol.Schema:
+    return vol.Schema(_options_schema(hass, data))
 
 
-def _config_options_schema(data: dict | None = None) -> vol.Schema:
-    return vol.Schema(_options_schema(data))
+def _config_options_schema(hass: HomeAssistant, data: dict | None = None) -> vol.Schema:
+    return vol.Schema(_options_schema(hass, data))
 
 
 class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -66,7 +72,7 @@ class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             return self.async_create_entry(title=DEFAULT_NAME, data=_normalize_options(user_input))
-        return self.async_show_form(step_id="user", data_schema=_schema(), errors=errors)
+        return self.async_show_form(step_id="user", data_schema=_schema(self.hass), errors=errors)
 
     @staticmethod
     @callback
@@ -80,5 +86,5 @@ class PidWindowOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=_normalize_options(user_input))
         return self.async_show_form(
             step_id="init",
-            data_schema=_config_options_schema({**self.config_entry.data, **self.config_entry.options}),
+            data_schema=_config_options_schema(self.hass, {**self.config_entry.data, **self.config_entry.options}),
         )
