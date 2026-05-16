@@ -109,14 +109,14 @@
       "ki": { "name": "Время интегрирования" },
       "kd": { "name": "Время дифференцирования" },
       "update_interval": { "name": "Интервал обновления" },
-      "co2_threshold": { "name": "Порог CO₂" },
-      "co2_hysteresis": { "name": "Гистерезис CO₂" },
-      "co2_ventilation_position": { "name": "Позиция проветривания CO₂" },
-      "co2_no_effect_timeout": { "name": "Таймаут CO₂ без эффекта" },
-      "co2_minimum_drop": { "name": "Минимальное снижение CO₂" },
-      "co2_indoor_guard_margin": { "name": "Защита CO₂ по температуре" },
-      "co2_cold_outdoor_threshold": { "name": "Холодная улица CO₂" },
-      "co2_cold_max_position": { "name": "Макс. окно при холодной улице" }
+      "co2_threshold": { "name": "CO₂ Порог" },
+      "co2_hysteresis": { "name": "CO₂ Гистерезис" },
+      "co2_ventilation_position": { "name": "CO₂ Позиция проветривания" },
+      "co2_no_effect_timeout": { "name": "CO₂ Таймаут без эффекта" },
+      "co2_minimum_drop": { "name": "CO₂ Минимальное снижение" },
+      "co2_indoor_guard_margin": { "name": "CO₂ Защита по температуре" },
+      "co2_cold_outdoor_threshold": { "name": "CO₂ Холодная улица" },
+      "co2_cold_max_position": { "name": "CO₂ Макс. окно при холодной улице" }
     },
     "cover": {
       "window": { "name": "Окно" }

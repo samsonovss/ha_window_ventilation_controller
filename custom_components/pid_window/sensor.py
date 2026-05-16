@@ -43,7 +43,7 @@ class PidWindowSensor(SensorEntity):
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_native_unit_of_measurement = unit
         self._remove_listener = controller.register_listener(self._handle_update)
-        if key in {"cover_position", "pid_output", "co2_position"}:
+        if key in {"cover_position", "pid_output", "co2", "co2_position"}:
             self._attr_suggested_display_precision = 0
         if key in {"cooling_delta", "pid_output", "co2_position"}:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -91,4 +91,5 @@ class PidWindowSensor(SensorEntity):
         value = getattr(self._controller.state, self._key)
         if self._is_text:
             return value
-        return None if value is None else round(float(value), 1)
+        precision = 0 if self._key == "co2" else 1
+        return None if value is None else round(float(value), precision)
