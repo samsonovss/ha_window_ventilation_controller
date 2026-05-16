@@ -7,14 +7,24 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 
-from .const import DOMAIN
+from .const import (
+    CONF_CO2_COLD_MAX_POSITION,
+    CONF_CO2_COLD_OUTDOOR_THRESHOLD,
+    CONF_CO2_HYSTERESIS,
+    CONF_CO2_INDOOR_GUARD_MARGIN,
+    CONF_CO2_MINIMUM_DROP,
+    CONF_CO2_NO_EFFECT_TIMEOUT,
+    CONF_CO2_THRESHOLD,
+    CONF_CO2_VENTILATION_POSITION,
+    DOMAIN,
+)
 from . import RuntimeData
 
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> None:
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
-    async_add_entities([
+    numbers = [
         PidWindowNumber(controller, entry.entry_id, "target_temp", 16.0, 30.0, 0.1, UnitOfTemperature.CELSIUS, category=None),
         PidWindowNumber(controller, entry.entry_id, "temp_deadband", 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
         PidWindowNumber(controller, entry.entry_id, "cooling_delta_threshold", 3.0, 20.0, 0.5, UnitOfTemperature.CELSIUS),
@@ -24,7 +34,19 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
         PidWindowNumber(controller, entry.entry_id, "ki", 0.0, 7200.0, 30.0, "s"),
         PidWindowNumber(controller, entry.entry_id, "kd", 0.0, 1800.0, 30.0, "s"),
         PidWindowNumber(controller, entry.entry_id, "update_interval", 15.0, 600.0, 15.0, None),
-    ])
+    ]
+    if controller.co2_sensor:
+        numbers.extend([
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_THRESHOLD, 600.0, 2000.0, 50.0, "ppm"),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_HYSTERESIS, 0.0, 500.0, 50.0, "ppm"),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_VENTILATION_POSITION, 0.0, 100.0, 5.0, "%"),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_NO_EFFECT_TIMEOUT, 1.0, 60.0, 1.0, "min"),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_MINIMUM_DROP, 0.0, 300.0, 10.0, "ppm"),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_INDOOR_GUARD_MARGIN, 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_COLD_OUTDOOR_THRESHOLD, -30.0, 30.0, 1.0, UnitOfTemperature.CELSIUS),
+            PidWindowNumber(controller, entry.entry_id, CONF_CO2_COLD_MAX_POSITION, 0.0, 100.0, 5.0, "%"),
+        ])
+    async_add_entities(numbers)
 
 
 class PidWindowNumber(NumberEntity):
@@ -65,6 +87,9 @@ class PidWindowNumber(NumberEntity):
             return
         if self._key == "position_change_threshold":
             await self._controller.async_set_position_change_threshold(float(value))
+            return
+        if self._key.startswith("co2_"):
+            await self._controller.async_set_co2_number(self._key, float(value))
             return
 
         await self._controller.async_set_gain(self._key, float(value))

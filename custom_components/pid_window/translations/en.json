@@ -10,6 +10,7 @@
           "cover_entity": "Window/door",
           "outdoor_sensor": "Outdoor",
           "ac_climate_entity": "Air conditioner",
+          "co2_sensor": "CO₂",
           "target_temp": "Target temperature",
           "kp": "Proportional band",
           "ki": "Integral time",
@@ -36,6 +37,7 @@
           "cover_entity": "Window/door",
           "outdoor_sensor": "Outdoor",
           "ac_climate_entity": "Air conditioner",
+          "co2_sensor": "CO₂",
           "target_temp": "Target temperature",
           "kp": "Proportional band",
           "ki": "Integral time",
@@ -73,6 +75,9 @@
     "switch": {
       "ac_conflict_protection": {
         "name": "AC conflict protection"
+      },
+      "co2_ventilation": {
+        "name": "CO₂ ventilation"
       }
     },
     "select": {
@@ -103,7 +108,15 @@
       "kp": { "name": "Proportional band" },
       "ki": { "name": "Integral time" },
       "kd": { "name": "Derivative time" },
-      "update_interval": { "name": "Update interval" }
+      "update_interval": { "name": "Update interval" },
+      "co2_threshold": { "name": "CO₂ threshold" },
+      "co2_hysteresis": { "name": "CO₂ hysteresis" },
+      "co2_ventilation_position": { "name": "CO₂ ventilation position" },
+      "co2_no_effect_timeout": { "name": "CO₂ no effect timeout" },
+      "co2_minimum_drop": { "name": "CO₂ minimum drop" },
+      "co2_indoor_guard_margin": { "name": "CO₂ indoor guard margin" },
+      "co2_cold_outdoor_threshold": { "name": "CO₂ cold outdoor threshold" },
+      "co2_cold_max_position": { "name": "CO₂ cold max position" }
     },
     "cover": {
       "window": { "name": "Window" }
@@ -122,9 +135,31 @@
           "idle": "Idle",
           "integral_locked": "PID limited",
           "ac_active_window_closed": "Window closed: AC",
+          "co2_high": "High CO₂",
+          "co2_ventilating": "CO₂ ventilation",
+          "co2_blocked_by_delta": "CO₂: low cooling delta",
+          "co2_blocked_by_ac": "CO₂: AC",
+          "co2_blocked_by_temperature": "CO₂: room near target",
+          "co2_no_effect": "CO₂ not dropping",
           "error": "Error"
         }
       },
+      "co2_status": {
+        "name": "CO₂ status",
+        "state": {
+          "disabled": "Disabled",
+          "idle": "Idle",
+          "co2_unavailable": "CO₂ sensor unavailable",
+          "co2_high": "High CO₂",
+          "co2_ventilating": "CO₂ ventilation",
+          "co2_blocked_by_delta": "CO₂: low cooling delta",
+          "co2_blocked_by_ac": "CO₂: AC",
+          "co2_blocked_by_temperature": "CO₂: room near target",
+          "co2_no_effect": "CO₂ not dropping"
+        }
+      },
+      "co2": { "name": "CO₂" },
+      "co2_position": { "name": "CO₂ position" },
       "cooling_delta": { "name": "Cooling delta" },
       "error": { "name": "Temperature error" },
       "current_temp": { "name": "Room" },

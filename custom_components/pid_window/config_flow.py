@@ -10,6 +10,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_AC_CLIMATE_ENTITY,
+    CONF_CO2_SENSOR,
     CONF_COVER_ENTITY,
     CONF_OUTDOOR_SENSOR,
     CONF_TEMP_SENSOR,
@@ -20,16 +21,15 @@ from .const import (
 
 def _normalize_options(data: dict) -> dict:
     normalized = dict(data)
-    for key in (CONF_OUTDOOR_SENSOR, CONF_AC_CLIMATE_ENTITY):
+    for key in (CONF_OUTDOOR_SENSOR, CONF_AC_CLIMATE_ENTITY, CONF_CO2_SENSOR):
         if not normalized.get(key):
             normalized.pop(key, None)
     return normalized
 
 
-def _ac_options(hass: HomeAssistant, data: dict) -> list[dict[str, str]]:
+def _entity_options(hass: HomeAssistant, domain: str, current: str | None = None) -> list[dict[str, str]]:
     options = [{"value": "", "label": "-"}]
-    entity_ids = sorted(hass.states.async_entity_ids("climate"))
-    current = data.get(CONF_AC_CLIMATE_ENTITY)
+    entity_ids = sorted(hass.states.async_entity_ids(domain))
     if current and current not in entity_ids:
         entity_ids.insert(0, current)
     options.extend({"value": entity_id, "label": entity_id} for entity_id in entity_ids)
@@ -47,7 +47,13 @@ def _options_schema(hass: HomeAssistant, data: dict | None = None) -> dict:
         ),
         vol.Optional(CONF_AC_CLIMATE_ENTITY, default=data.get(CONF_AC_CLIMATE_ENTITY, "")): selector.SelectSelector(
             selector.SelectSelectorConfig(
-                options=_ac_options(hass, data),
+                options=_entity_options(hass, "climate", data.get(CONF_AC_CLIMATE_ENTITY)),
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Optional(CONF_CO2_SENSOR, default=data.get(CONF_CO2_SENSOR, "")): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=_entity_options(hass, "sensor", data.get(CONF_CO2_SENSOR)),
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         ),

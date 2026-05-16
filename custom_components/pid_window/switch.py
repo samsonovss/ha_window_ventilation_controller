@@ -12,19 +12,23 @@ from .const import DOMAIN
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> None:
     runtime: RuntimeData = hass.data[DOMAIN][entry.entry_id]
     controller = runtime.controller
-    if not controller.ac_climate_entity:
-        return
-    async_add_entities([PidWindowAcConflictProtectionSwitch(controller, entry.entry_id)])
+    switches = []
+    if controller.ac_climate_entity:
+        switches.append(PidWindowSwitch(controller, entry.entry_id, "ac_conflict_protection"))
+    if controller.co2_sensor:
+        switches.append(PidWindowSwitch(controller, entry.entry_id, "co2_ventilation"))
+    async_add_entities(switches)
 
 
-class PidWindowAcConflictProtectionSwitch(SwitchEntity):
+class PidWindowSwitch(SwitchEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, controller, entry_id: str) -> None:
+    def __init__(self, controller, entry_id: str, key: str) -> None:
         self._controller = controller
+        self._key = key
         self._attr_device_info = controller.device_info
-        self._attr_translation_key = "ac_conflict_protection"
-        self._attr_unique_id = f"{entry_id}_ac_conflict_protection"
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{entry_id}_{key}"
         self._remove_listener = controller.register_listener(self._handle_update)
 
     async def async_added_to_hass(self) -> None:
@@ -36,10 +40,16 @@ class PidWindowAcConflictProtectionSwitch(SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        return bool(self._controller.ac_conflict_protection)
+        return bool(getattr(self._controller, self._key))
 
     async def async_turn_on(self, **kwargs) -> None:
+        if self._key == "co2_ventilation":
+            await self._controller.async_set_co2_ventilation(True)
+            return
         await self._controller.async_set_ac_conflict_protection(True)
 
     async def async_turn_off(self, **kwargs) -> None:
+        if self._key == "co2_ventilation":
+            await self._controller.async_set_co2_ventilation(False)
+            return
         await self._controller.async_set_ac_conflict_protection(False)

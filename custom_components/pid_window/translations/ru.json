@@ -10,6 +10,7 @@
           "cover_entity": "Окно/дверь",
           "outdoor_sensor": "Улица",
           "ac_climate_entity": "Кондиционер",
+          "co2_sensor": "CO₂",
           "target_temp": "Целевая температура",
           "kp": "Пропорциональная зона",
           "ki": "Время интегрирования",
@@ -36,6 +37,7 @@
           "cover_entity": "Окно/дверь",
           "outdoor_sensor": "Улица",
           "ac_climate_entity": "Кондиционер",
+          "co2_sensor": "CO₂",
           "target_temp": "Целевая температура",
           "kp": "Пропорциональная зона",
           "ki": "Время интегрирования",
@@ -73,6 +75,9 @@
     "switch": {
       "ac_conflict_protection": {
         "name": "Защита при кондиционере"
+      },
+      "co2_ventilation": {
+        "name": "Проветривание по CO₂"
       }
     },
     "select": {
@@ -103,7 +108,15 @@
       "kp": { "name": "Пропорциональная зона" },
       "ki": { "name": "Время интегрирования" },
       "kd": { "name": "Время дифференцирования" },
-      "update_interval": { "name": "Интервал обновления" }
+      "update_interval": { "name": "Интервал обновления" },
+      "co2_threshold": { "name": "Порог CO₂" },
+      "co2_hysteresis": { "name": "Гистерезис CO₂" },
+      "co2_ventilation_position": { "name": "Позиция проветривания CO₂" },
+      "co2_no_effect_timeout": { "name": "Таймаут CO₂ без эффекта" },
+      "co2_minimum_drop": { "name": "Минимальное снижение CO₂" },
+      "co2_indoor_guard_margin": { "name": "Защита CO₂ по температуре" },
+      "co2_cold_outdoor_threshold": { "name": "Холодная улица CO₂" },
+      "co2_cold_max_position": { "name": "Макс. окно при холодной улице" }
     },
     "cover": {
       "window": { "name": "Окно" }
@@ -122,9 +135,31 @@
           "idle": "Ожидание",
           "integral_locked": "Ограничение PID",
           "ac_active_window_closed": "Окно закрыто: кондиционер",
+          "co2_high": "Высокий CO₂",
+          "co2_ventilating": "Проветривание по CO₂",
+          "co2_blocked_by_delta": "CO₂: малая разница температур",
+          "co2_blocked_by_ac": "CO₂: кондиционер",
+          "co2_blocked_by_temperature": "CO₂: комната у цели",
+          "co2_no_effect": "CO₂ не снижается",
           "error": "Ошибка"
         }
       },
+      "co2_status": {
+        "name": "Статус CO₂",
+        "state": {
+          "disabled": "Выключено",
+          "idle": "Ожидание",
+          "co2_unavailable": "Нет датчика CO₂",
+          "co2_high": "Высокий CO₂",
+          "co2_ventilating": "Проветривание по CO₂",
+          "co2_blocked_by_delta": "CO₂: малая разница температур",
+          "co2_blocked_by_ac": "CO₂: кондиционер",
+          "co2_blocked_by_temperature": "CO₂: комната у цели",
+          "co2_no_effect": "CO₂ не снижается"
+        }
+      },
+      "co2": { "name": "CO₂" },
+      "co2_position": { "name": "Позиция CO₂" },
       "cooling_delta": { "name": "Разница с улицей" },
       "error": { "name": "Разница с комнатой" },
       "current_temp": { "name": "Комната" },

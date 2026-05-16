@@ -15,6 +15,16 @@ from homeassistant.helpers.event import async_track_time_interval
 from .const import (
     CONF_AC_CLIMATE_ENTITY,
     CONF_AC_CONFLICT_PROTECTION,
+    CONF_CO2_COLD_MAX_POSITION,
+    CONF_CO2_COLD_OUTDOOR_THRESHOLD,
+    CONF_CO2_HYSTERESIS,
+    CONF_CO2_INDOOR_GUARD_MARGIN,
+    CONF_CO2_MINIMUM_DROP,
+    CONF_CO2_NO_EFFECT_TIMEOUT,
+    CONF_CO2_SENSOR,
+    CONF_CO2_THRESHOLD,
+    CONF_CO2_VENTILATION,
+    CONF_CO2_VENTILATION_POSITION,
     CONF_COOLING_DELTA_HYSTERESIS,
     CONF_COOLING_DELTA_THRESHOLD,
     CONF_COOLING_MODE,
@@ -34,6 +44,15 @@ from .const import (
     DEFAULT_COOLING_DELTA_HYSTERESIS,
     DEFAULT_COOLING_DELTA_THRESHOLD,
     DEFAULT_AC_CONFLICT_PROTECTION,
+    DEFAULT_CO2_COLD_MAX_POSITION,
+    DEFAULT_CO2_COLD_OUTDOOR_THRESHOLD,
+    DEFAULT_CO2_HYSTERESIS,
+    DEFAULT_CO2_INDOOR_GUARD_MARGIN,
+    DEFAULT_CO2_MINIMUM_DROP,
+    DEFAULT_CO2_NO_EFFECT_TIMEOUT,
+    DEFAULT_CO2_THRESHOLD,
+    DEFAULT_CO2_VENTILATION,
+    DEFAULT_CO2_VENTILATION_POSITION,
     DEFAULT_COOLING_MODE,
     DEFAULT_KD,
     DEFAULT_KI,
@@ -62,12 +81,15 @@ _LOGGER = logging.getLogger(__name__)
 class ControllerState:
     current_temp: float | None = None
     outdoor_temp: float | None = None
+    co2: float | None = None
     cooling_delta: float | None = None
     cover_position: float | None = None
     pid_output: float | None = None
+    co2_position: float | None = None
     error: float | None = None
     enabled: bool = True
     status: str = "idle"
+    co2_status: str = "disabled"
 
 
 class PidWindowController:
@@ -82,11 +104,15 @@ class PidWindowController:
         self.temp_sensor = options.get(CONF_TEMP_SENSOR, data[CONF_TEMP_SENSOR])
         self.cover_entity = options.get(CONF_COVER_ENTITY, data[CONF_COVER_ENTITY])
         self.ac_climate_entity = options.get(CONF_AC_CLIMATE_ENTITY, data.get(CONF_AC_CLIMATE_ENTITY)) or None
+        self.co2_sensor = options.get(CONF_CO2_SENSOR, data.get(CONF_CO2_SENSOR)) or None
         self.ac_conflict_protection = bool(
             options.get(
                 CONF_AC_CONFLICT_PROTECTION,
                 data.get(CONF_AC_CONFLICT_PROTECTION, DEFAULT_AC_CONFLICT_PROTECTION),
             )
+        )
+        self.co2_ventilation = bool(
+            options.get(CONF_CO2_VENTILATION, data.get(CONF_CO2_VENTILATION, DEFAULT_CO2_VENTILATION))
         )
         self.outdoor_sensor = options.get(CONF_OUTDOOR_SENSOR, data.get(CONF_OUTDOOR_SENSOR)) or None
         self.cooling_mode = str(
@@ -110,6 +136,14 @@ class PidWindowController:
         self.position_change_threshold = float(options.get(CONF_POSITION_CHANGE_THRESHOLD, data.get(CONF_POSITION_CHANGE_THRESHOLD, DEFAULT_POSITION_CHANGE_THRESHOLD)))
         self.cooling_delta_threshold = float(options.get(CONF_COOLING_DELTA_THRESHOLD, data.get(CONF_COOLING_DELTA_THRESHOLD, DEFAULT_COOLING_DELTA_THRESHOLD)))
         self.cooling_delta_hysteresis = float(options.get(CONF_COOLING_DELTA_HYSTERESIS, data.get(CONF_COOLING_DELTA_HYSTERESIS, DEFAULT_COOLING_DELTA_HYSTERESIS)))
+        self.co2_threshold = float(options.get(CONF_CO2_THRESHOLD, data.get(CONF_CO2_THRESHOLD, DEFAULT_CO2_THRESHOLD)))
+        self.co2_hysteresis = float(options.get(CONF_CO2_HYSTERESIS, data.get(CONF_CO2_HYSTERESIS, DEFAULT_CO2_HYSTERESIS)))
+        self.co2_ventilation_position = float(options.get(CONF_CO2_VENTILATION_POSITION, data.get(CONF_CO2_VENTILATION_POSITION, DEFAULT_CO2_VENTILATION_POSITION)))
+        self.co2_no_effect_timeout = int(options.get(CONF_CO2_NO_EFFECT_TIMEOUT, data.get(CONF_CO2_NO_EFFECT_TIMEOUT, DEFAULT_CO2_NO_EFFECT_TIMEOUT)))
+        self.co2_minimum_drop = float(options.get(CONF_CO2_MINIMUM_DROP, data.get(CONF_CO2_MINIMUM_DROP, DEFAULT_CO2_MINIMUM_DROP)))
+        self.co2_indoor_guard_margin = float(options.get(CONF_CO2_INDOOR_GUARD_MARGIN, data.get(CONF_CO2_INDOOR_GUARD_MARGIN, DEFAULT_CO2_INDOOR_GUARD_MARGIN)))
+        self.co2_cold_outdoor_threshold = float(options.get(CONF_CO2_COLD_OUTDOOR_THRESHOLD, data.get(CONF_CO2_COLD_OUTDOOR_THRESHOLD, DEFAULT_CO2_COLD_OUTDOOR_THRESHOLD)))
+        self.co2_cold_max_position = float(options.get(CONF_CO2_COLD_MAX_POSITION, data.get(CONF_CO2_COLD_MAX_POSITION, DEFAULT_CO2_COLD_MAX_POSITION)))
         configured_pid_profile = options.get(CONF_PID_PROFILE, data.get(CONF_PID_PROFILE))
         if configured_pid_profile is None:
             self.pid_profile = self._matching_pid_profile()
@@ -122,6 +156,7 @@ class PidWindowController:
         self._listeners: list[Callable[[], None]] = []
         self._unsub_interval = None
         self._unsub_ac_listener = None
+        self._unsub_co2_listener = None
         self._enabled = True
         self._integral = 0.0
         self._previous_error: float | None = None
@@ -131,6 +166,9 @@ class PidWindowController:
         self._last_update_tick: float | None = None
         self._sample_count = 0
         self._cooling_pid_allowed = False
+        self._co2_ventilation_active = False
+        self._co2_no_effect_started_at: float | None = None
+        self._co2_no_effect_start_value: float | None = None
         self._last_power = 0.0
 
     @property
@@ -150,10 +188,17 @@ class PidWindowController:
         )
         if self.ac_climate_entity:
             self._unsub_ac_listener = self.hass.bus.async_listen("state_changed", self._async_ac_state_changed)
+        if self.co2_sensor:
+            self._unsub_co2_listener = self.hass.bus.async_listen("state_changed", self._async_co2_state_changed)
         await self._async_tick(None)
 
     def _async_ac_state_changed(self, event: Event) -> None:
         if event.data.get("entity_id") != self.ac_climate_entity:
+            return
+        self.hass.async_create_task(self._async_tick(None))
+
+    def _async_co2_state_changed(self, event: Event) -> None:
+        if event.data.get("entity_id") != self.co2_sensor:
             return
         self.hass.async_create_task(self._async_tick(None))
 
@@ -184,6 +229,9 @@ class PidWindowController:
         if self._unsub_ac_listener:
             self._unsub_ac_listener()
             self._unsub_ac_listener = None
+        if self._unsub_co2_listener:
+            self._unsub_co2_listener()
+            self._unsub_co2_listener = None
 
     def register_listener(self, callback_fn: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(callback_fn)
@@ -237,6 +285,96 @@ class PidWindowController:
             return False
         return state.state in {"cool", "dry", "heat_cool"}
 
+    def _update_co2_active(self, co2: float | None) -> bool:
+        if not self.co2_sensor or co2 is None:
+            self._co2_ventilation_active = False
+            return False
+        if co2 >= self.co2_threshold:
+            self._co2_ventilation_active = True
+        elif co2 <= self.co2_threshold - self.co2_hysteresis:
+            self._co2_ventilation_active = False
+        return self._co2_ventilation_active
+
+    def _reset_co2_no_effect(self) -> None:
+        self._co2_no_effect_started_at = None
+        self._co2_no_effect_start_value = None
+
+    def _track_co2_no_effect(self, co2: float | None, final_position: float) -> bool:
+        if (
+            co2 is None
+            or final_position < self.co2_ventilation_position
+            or self.co2_no_effect_timeout <= 0
+        ):
+            self._reset_co2_no_effect()
+            return False
+
+        now = self.hass.loop.time()
+        if self._co2_no_effect_started_at is None or self._co2_no_effect_start_value is None:
+            self._co2_no_effect_started_at = now
+            self._co2_no_effect_start_value = co2
+            return False
+
+        if co2 <= self._co2_no_effect_start_value - self.co2_minimum_drop:
+            self._co2_no_effect_started_at = now
+            self._co2_no_effect_start_value = co2
+            return False
+
+        return now - self._co2_no_effect_started_at >= self.co2_no_effect_timeout * 60
+
+    def _co2_minimum_position(
+        self,
+        *,
+        co2: float | None,
+        current_temp: float,
+        outdoor_temp: float | None,
+        cooling_delta: float | None,
+    ) -> float | None:
+        co2_active = self._update_co2_active(co2)
+        self.state.co2_position = None
+
+        if not self.co2_sensor:
+            self.state.co2_status = "disabled"
+            self._reset_co2_no_effect()
+            return None
+        if co2 is None:
+            self.state.co2_status = "co2_unavailable"
+            self._reset_co2_no_effect()
+            return None
+        if not co2_active:
+            self.state.co2_status = "idle"
+            self._reset_co2_no_effect()
+            return None
+        if not self.co2_ventilation:
+            self.state.co2_status = "co2_high"
+            self._reset_co2_no_effect()
+            return None
+        if current_temp <= self.target_temp + self.co2_indoor_guard_margin:
+            self.state.co2_status = "co2_blocked_by_temperature"
+            self._reset_co2_no_effect()
+            return None
+        if self._ac_is_active():
+            self.state.co2_status = "co2_blocked_by_ac"
+            self._reset_co2_no_effect()
+            return None
+        if self.cooling_mode == COOLING_MODE_DISABLED:
+            self.state.co2_status = "disabled"
+            self._reset_co2_no_effect()
+            return None
+        if self.cooling_mode == COOLING_MODE_AUTO:
+            delta_allowed = cooling_delta is not None and cooling_delta >= self.cooling_delta_threshold
+            if not delta_allowed:
+                self.state.co2_status = "co2_blocked_by_delta"
+                self._reset_co2_no_effect()
+                return None
+
+        position = self.co2_ventilation_position
+        if outdoor_temp is not None and outdoor_temp <= self.co2_cold_outdoor_threshold:
+            position = min(position, self.co2_cold_max_position)
+        position = max(self.min_position, min(self.max_position, position))
+        self.state.co2_position = position
+        self.state.co2_status = "co2_ventilating"
+        return position
+
     def _set_enabled_runtime(self, enabled: bool) -> None:
         self._enabled = enabled
         self.state.enabled = enabled
@@ -257,20 +395,26 @@ class PidWindowController:
     async def _async_tick_impl(self, _event: Event | None) -> None:
         current_temp = self._read_float(self.temp_sensor)
         outdoor_temp = self._read_float(self.outdoor_sensor) if self.outdoor_sensor else None
+        co2 = self._read_float(self.co2_sensor) if self.co2_sensor else None
         cooling_delta = None if current_temp is None or outdoor_temp is None else current_temp - outdoor_temp
         cover_available = self._cover_available()
         cover_position = self._cover_position() if cover_available else None
 
         self.state.current_temp = current_temp
         self.state.outdoor_temp = outdoor_temp
+        self.state.co2 = co2
         self.state.cooling_delta = cooling_delta
         self.state.error = None if current_temp is None else current_temp - self.target_temp
         self.state.cover_position = cover_position
         self.state.enabled = self._enabled
+        self.state.co2_position = None
+        if not self.co2_sensor:
+            self.state.co2_status = "disabled"
 
         if current_temp is None:
             self.state.status = "temp_sensor_unavailable"
             self.state.pid_output = float(self.min_position)
+            self._reset_co2_no_effect()
             if cover_available:
                 await self._set_cover_position(float(self.min_position))
             self._notify()
@@ -280,6 +424,13 @@ class PidWindowController:
             self.state.status = "cover_unavailable"
             self._notify()
             return
+
+        co2_min_position = self._co2_minimum_position(
+            co2=co2,
+            current_temp=current_temp,
+            outdoor_temp=outdoor_temp,
+            cooling_delta=cooling_delta,
+        )
 
         if self._ac_is_active():
             self._integral = 0.0
@@ -345,7 +496,19 @@ class PidWindowController:
         if self.temp_deadband > 0 and current_temp < self.target_temp + self.temp_deadband:
             self._previous_error = error
             self._last_temp = current_temp
-            self.state.status = "deadband"
+            if co2_min_position is None:
+                self.state.status = "deadband"
+                self._reset_co2_no_effect()
+                self._notify()
+                return
+            pid_position = float(cover_position if cover_position is not None else self.min_position)
+            target_position = max(pid_position, co2_min_position)
+            self.state.pid_output = pid_position
+            self.state.status = "co2_ventilating"
+            if self._track_co2_no_effect(co2, target_position):
+                self.state.status = "co2_no_effect"
+                self.state.co2_status = "co2_no_effect"
+            await self._set_cover_position(target_position)
             self._notify()
             return
 
@@ -392,8 +555,11 @@ class PidWindowController:
             power = 0.5 + ((error + self._integral + derivative) / prop_band)
 
         power = max(0.0, min(1.0, power))
-        output = self.min_position + power * range_width
-        output = max(self.min_position, min(self.max_position, output))
+        pid_position = self.min_position + power * range_width
+        pid_position = max(self.min_position, min(self.max_position, pid_position))
+        output = pid_position
+        if co2_min_position is not None:
+            output = max(pid_position, co2_min_position)
 
         self._previous_error = error
         self._last_temp = current_temp
@@ -401,8 +567,14 @@ class PidWindowController:
         self._last_update_tick = now
         self._last_power = power
         self._last_position = output
-        self.state.pid_output = output
-        self.state.status = "integral_locked" if integral_locked else "cooling"
+        self.state.pid_output = pid_position
+        if co2_min_position is not None and output > pid_position:
+            self.state.status = "co2_ventilating"
+        else:
+            self.state.status = "integral_locked" if integral_locked else "cooling"
+        if co2_min_position is not None and self._track_co2_no_effect(co2, output):
+            self.state.status = "co2_no_effect"
+            self.state.co2_status = "co2_no_effect"
         await self._set_cover_position(output)
         self._notify()
 
@@ -458,6 +630,12 @@ class PidWindowController:
     async def async_set_ac_conflict_protection(self, enabled: bool) -> None:
         self.ac_conflict_protection = bool(enabled)
         self._async_save_option(CONF_AC_CONFLICT_PROTECTION, self.ac_conflict_protection)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_co2_ventilation(self, enabled: bool) -> None:
+        self.co2_ventilation = bool(enabled)
+        self._async_save_option(CONF_CO2_VENTILATION, self.co2_ventilation)
         self._notify()
         await self._async_tick(None)
 
@@ -523,6 +701,14 @@ class PidWindowController:
                 CONF_PID_PROFILE: PID_PROFILE_MANUAL,
             }
         )
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_co2_number(self, key: str, value: float) -> None:
+        if key == CONF_CO2_NO_EFFECT_TIMEOUT:
+            value = int(value)
+        setattr(self, key, value)
+        self._async_save_option(key, value)
         self._notify()
         await self._async_tick(None)
 
