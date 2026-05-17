@@ -206,7 +206,7 @@ Main controls:
 
 Configuration and tuning:
 
-- `Window PID profile`
+- `Ventilation profile`
 - `PID proportional band`
 - `PID integral time`
 - `PID derivative time`

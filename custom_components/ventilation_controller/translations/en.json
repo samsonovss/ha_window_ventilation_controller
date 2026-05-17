@@ -89,7 +89,7 @@
         }
       },
       "pid_profile": {
-        "name": "Window PID profile",
+        "name": "Ventilation profile",
         "state": {
           "soft": "Soft",
           "normal": "Normal",
