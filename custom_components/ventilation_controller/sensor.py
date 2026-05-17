@@ -1,4 +1,4 @@
-"""Sensors for Window Ventilation Controller."""
+"""Sensors for Ventilation Controller."""
 
 from __future__ import annotations
 

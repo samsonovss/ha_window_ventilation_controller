@@ -1,9 +1,9 @@
-# Window Ventilation Controller
+# Ventilation Controller
 
 [English version](README.md)
 
 <p align="center">
-  <img src="assets/banner-ru.png" alt="Window Ventilation Controller" width="100%">
+  <img src="assets/banner-ru.png" alt="Ventilation Controller" width="100%">
 </p>
 
 ## Содержание
@@ -19,7 +19,7 @@
 - [Заметки](#заметки)
 - [Авторы](#авторы)
 
-Window Ventilation Controller — кастомная интеграция для Home Assistant, которая управляет окном, дверью, заслонкой или любой другой `cover`-сущностью с позицией от 0 до 100%.
+Ventilation Controller — кастомная интеграция для Home Assistant, которая управляет окном, дверью, заслонкой или любой другой `cover`-сущностью с позицией от 0 до 100%.
 
 Хорошо подходит для приводов Drivent, но не привязана к ним. Можно использовать любой Home Assistant `cover`, у которого есть управление положением от 0 до 100%.
 
@@ -187,14 +187,14 @@ PID-логика похожа на `node-red-contrib-pid`:
 
 1. Открой HACS.
 2. Добавь этот репозиторий как custom integration repository.
-3. Установи **Window Ventilation Controller**.
+3. Установи **Ventilation Controller**.
 4. Перезапусти Home Assistant.
 5. Открой **Настройки -> Устройства и службы -> Добавить интеграцию**.
 6. Выбери датчик комнаты, датчик улицы при необходимости, кондиционер при необходимости, датчик CO₂ при необходимости и управляемое окно/дверь/заслонку.
 
 ### Ручная Установка
 
-Скопируй `custom_components/window_ventilation` в `/config/custom_components/window_ventilation` и перезапусти Home Assistant.
+Скопируй `custom_components/ventilation_controller` в `/config/custom_components/ventilation_controller` и перезапусти Home Assistant.
 
 ## Заметки
 

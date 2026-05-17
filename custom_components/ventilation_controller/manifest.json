@@ -1,0 +1,13 @@
+{
+  "domain": "ventilation_controller",
+  "name": "Ventilation Controller",
+  "codeowners": ["@samsonovss"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/samsonovss/ha-ventilation-controller",
+  "iot_class": "local_polling",
+  "integration_type": "device",
+  "loggers": ["custom_components.ventilation_controller"],
+  "quality_scale": "bronze",
+  "version": "0.1.0"
+}

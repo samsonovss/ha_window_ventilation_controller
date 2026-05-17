@@ -1,5 +1,5 @@
 {
-  "name": "Window Ventilation Controller",
+  "name": "Ventilation Controller",
   "content_in_root": false,
-  "domains": ["window_ventilation"]
+  "domains": ["ventilation_controller"]
 }

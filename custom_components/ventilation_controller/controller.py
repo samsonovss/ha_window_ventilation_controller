@@ -1,4 +1,4 @@
-"""Runtime controller for Window Ventilation Controller."""
+"""Runtime controller for Ventilation Controller."""
 
 from __future__ import annotations
 
@@ -174,10 +174,10 @@ class PidWindowController:
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={("window_ventilation", self.entry.entry_id)},
-            name=self.entry.data.get("name", "Window Ventilation Controller"),
+            identifiers={("ventilation_controller", self.entry.entry_id)},
+            name=self.entry.data.get("name", "Ventilation Controller"),
             manufacturer="OpenClaw",
-            model="Window Ventilation Controller",
+            model="Ventilation Controller",
         )
 
     async def async_start(self) -> None:

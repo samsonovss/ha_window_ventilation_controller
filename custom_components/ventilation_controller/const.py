@@ -1,6 +1,6 @@
-"""Constants for Window Ventilation Controller."""
+"""Constants for Ventilation Controller."""
 
-DOMAIN = "window_ventilation"
+DOMAIN = "ventilation_controller"
 CONF_NAME = "name"
 CONF_COOLING_MODE = "cooling_mode"
 CONF_TEMP_SENSOR = "temp_sensor"
@@ -40,7 +40,7 @@ PID_PROFILE_SOFT = "soft"
 PID_PROFILE_NORMAL = "normal"
 PID_PROFILE_AGGRESSIVE = "aggressive"
 
-DEFAULT_NAME = "Window Ventilation Controller"
+DEFAULT_NAME = "Ventilation Controller"
 DEFAULT_COOLING_MODE = COOLING_MODE_AUTO
 DEFAULT_TARGET_TEMP = 24.0
 DEFAULT_KP = 6.0

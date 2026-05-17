@@ -1,9 +1,9 @@
-# Window Ventilation Controller
+# Ventilation Controller
 
 [Русская версия](README.ru.md)
 
 <p align="center">
-  <img src="assets/banner-en.png" alt="Window Ventilation Controller" width="100%">
+  <img src="assets/banner-en.png" alt="Ventilation Controller" width="100%">
 </p>
 
 ## Contents
@@ -19,7 +19,7 @@
 - [Notes](#notes)
 - [Authors](#authors)
 
-Window Ventilation Controller is a Home Assistant custom integration for rooms with a motorized window, door, damper, or any other `cover` entity that can be positioned from 0 to 100%.
+Ventilation Controller is a Home Assistant custom integration for rooms with a motorized window, door, damper, or any other `cover` entity that can be positioned from 0 to 100%.
 
 It works well for Drivent window actuators, but it is not tied to Drivent. Any Home Assistant `cover` entity with 0-100% position control can be used.
 
@@ -187,14 +187,14 @@ Diagnostic sensors:
 
 1. Open HACS.
 2. Add this repository as a custom integration repository.
-3. Install **Window Ventilation Controller**.
+3. Install **Ventilation Controller**.
 4. Restart Home Assistant.
 5. Go to **Settings -> Devices & services -> Add integration**.
 6. Select the room sensor, optional outdoor sensor, optional AC entity, optional CO₂ sensor, and target cover.
 
 ### Manual Installation
 
-Copy `custom_components/window_ventilation` to `/config/custom_components/window_ventilation` and restart Home Assistant.
+Copy `custom_components/ventilation_controller` to `/config/custom_components/ventilation_controller` and restart Home Assistant.
 
 ## Notes
 

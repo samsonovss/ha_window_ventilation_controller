@@ -1,9 +1,9 @@
 {
-  "title": "Window Ventilation Controller",
+  "title": "Ventilation Controller",
   "config": {
     "step": {
       "user": {
-        "title": "Configure Window Ventilation Controller",
+        "title": "Configure Ventilation Controller",
         "data": {
           "name": "Name",
           "temp_sensor": "Room",
@@ -30,7 +30,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure Window Ventilation Controller",
+        "title": "Configure Ventilation Controller",
         "data": {
           "name": "Name",
           "temp_sensor": "Room",

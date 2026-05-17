@@ -1,4 +1,4 @@
-"""Window Ventilation Controller integration."""
+"""Ventilation Controller integration."""
 
 from __future__ import annotations
 

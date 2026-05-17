@@ -1,4 +1,4 @@
-"""Selects for Window Ventilation Controller."""
+"""Selects for Ventilation Controller."""
 
 from __future__ import annotations
 
