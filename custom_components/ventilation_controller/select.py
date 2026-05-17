@@ -40,6 +40,7 @@ class PidWindowCoolingModeSelect(SelectEntity):
         self._attr_device_info = controller.device_info
         self._attr_translation_key = "cooling_mode"
         self._attr_unique_id = f"{entry_id}_cooling_mode"
+        self._attr_icon = "mdi:window-open"
         self._remove_listener = controller.register_listener(self._handle_update)
 
     async def async_added_to_hass(self) -> None:
@@ -93,6 +94,7 @@ class PidWindowCo2VentilationSelect(SelectEntity):
         self._attr_device_info = controller.device_info
         self._attr_translation_key = "co2_ventilation"
         self._attr_unique_id = f"{entry_id}_co2_ventilation"
+        self._attr_icon = "mdi:window-open"
         self._remove_listener = controller.register_listener(self._handle_update)
 
     async def async_added_to_hass(self) -> None:
