@@ -206,7 +206,7 @@ Main controls:
 
 Configuration and tuning:
 
-- `Ventilation profile`
+- `Ventilation PID profile`
 - `PID proportional band`
 - `PID integral time`
 - `PID derivative time`
