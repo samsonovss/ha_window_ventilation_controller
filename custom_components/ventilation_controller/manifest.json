@@ -9,5 +9,5 @@
   "integration_type": "device",
   "loggers": ["custom_components.ventilation_controller"],
   "quality_scale": "bronze",
-  "version": "0.2.1"
+  "version": "0.2.2"
 }
