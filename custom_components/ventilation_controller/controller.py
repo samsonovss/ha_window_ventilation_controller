@@ -90,6 +90,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_EXHAUST_COORDINATORS: dict[tuple[int, str], "ExhaustCoordinator"] = {}
 
 
 @dataclass(slots=True)
@@ -106,6 +107,106 @@ class ControllerState:
     status: str = "idle"
     co2_status: str = "disabled"
     exhaust_status: str = "disabled"
+
+
+class ExhaustCoordinator:
+    """Shared on/off arbitration for one physical exhaust entity."""
+
+    def __init__(self, hass: HomeAssistant, entity_id: str) -> None:
+        self.hass = hass
+        self.entity_id = entity_id
+        self.controllers: set[PidWindowController] = set()
+        self.requests: dict[str, bool] = {}
+        self.expected_state: bool | None = None
+        self.manual_override_until: float | None = None
+        self.manual_state: bool | None = None
+        self._last_event_signature: tuple[str | None, str] | None = None
+        self._last_event_at: float | None = None
+
+    def register(self, controller: "PidWindowController") -> None:
+        self.controllers.add(controller)
+
+    def unregister(self, controller: "PidWindowController") -> None:
+        self.controllers.discard(controller)
+        self.requests.pop(controller.entry.entry_id, None)
+
+    def is_on(self) -> bool | None:
+        state = self.hass.states.get(self.entity_id)
+        if state is None or state.state in {STATE_UNKNOWN, STATE_UNAVAILABLE, "none"}:
+            return None
+        return state.state == "on"
+
+    def manual_status(self) -> str | None:
+        now = self.hass.loop.time()
+        if self.manual_override_until is not None and now < self.manual_override_until:
+            return "manual_on" if self.manual_state else "manual_off"
+        self.manual_override_until = None
+        self.manual_state = None
+        return None
+
+    def handle_state_changed(self, event: Event) -> bool:
+        old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
+        if new_state is None or new_state.state in {STATE_UNKNOWN, STATE_UNAVAILABLE, "none"}:
+            return False
+        if old_state is not None and old_state.state == new_state.state:
+            return False
+
+        now = self.hass.loop.time()
+        signature = (old_state.state if old_state is not None else None, new_state.state)
+        if (
+            self._last_event_signature == signature
+            and self._last_event_at is not None
+            and now - self._last_event_at < 1.0
+        ):
+            return False
+        self._last_event_signature = signature
+        self._last_event_at = now
+
+        is_on = new_state.state == "on"
+        if self.expected_state is not None and is_on == self.expected_state:
+            self.expected_state = None
+            return False
+
+        timeout = max((controller.exhaust_manual_override_timeout for controller in self.controllers), default=0)
+        if timeout > 0:
+            self.manual_state = is_on
+            self.manual_override_until = now + timeout * 60
+        return True
+
+    def clear_request(self, controller: "PidWindowController") -> None:
+        self.requests.pop(controller.entry.entry_id, None)
+
+    async def async_request(self, controller: "PidWindowController", turn_on: bool) -> None:
+        self.requests[controller.entry.entry_id] = turn_on
+        if self.manual_status() is not None:
+            return
+
+        desired = any(self.requests.values())
+        current = self.is_on()
+        if current is not None and current == desired:
+            return
+
+        domain = self.entity_id.split(".", 1)[0]
+        if domain not in {"fan", "switch"}:
+            return
+
+        self.expected_state = desired
+        await self.hass.services.async_call(
+            domain,
+            "turn_on" if desired else "turn_off",
+            {"entity_id": self.entity_id},
+            blocking=False,
+        )
+
+
+def _get_exhaust_coordinator(hass: HomeAssistant, entity_id: str) -> ExhaustCoordinator:
+    key = (id(hass), entity_id)
+    coordinator = _EXHAUST_COORDINATORS.get(key)
+    if coordinator is None:
+        coordinator = ExhaustCoordinator(hass, entity_id)
+        _EXHAUST_COORDINATORS[key] = coordinator
+    return coordinator
 
 
 class PidWindowController:
@@ -196,13 +297,13 @@ class PidWindowController:
         self._co2_ventilation_active = False
         self._co2_no_effect_started_at: float | None = None
         self._co2_no_effect_start_value: float | None = None
+        self._exhaust_coordinator = (
+            _get_exhaust_coordinator(hass, self.exhaust_entity) if self.exhaust_entity else None
+        )
         self._exhaust_no_cooling_started_at: float | None = None
         self._exhaust_no_cooling_start_temp: float | None = None
         self._exhaust_auto_started_at: float | None = None
         self._exhaust_cooldown_until: float | None = None
-        self._exhaust_manual_override_until: float | None = None
-        self._exhaust_manual_state: bool | None = None
-        self._exhaust_expected_state: bool | None = None
         self._last_power = 0.0
 
     @property
@@ -225,6 +326,8 @@ class PidWindowController:
         if self.co2_sensor:
             self._unsub_co2_listener = self.hass.bus.async_listen("state_changed", self._async_co2_state_changed)
         if self.exhaust_entity:
+            if self._exhaust_coordinator is not None:
+                self._exhaust_coordinator.register(self)
             self._unsub_exhaust_listener = self.hass.bus.async_listen("state_changed", self._async_exhaust_state_changed)
         await self._async_tick(None)
 
@@ -241,20 +344,11 @@ class PidWindowController:
     def _async_exhaust_state_changed(self, event: Event) -> None:
         if event.data.get("entity_id") != self.exhaust_entity:
             return
-        old_state = event.data.get("old_state")
-        new_state = event.data.get("new_state")
-        if new_state is None or new_state.state in {STATE_UNKNOWN, STATE_UNAVAILABLE, "none"}:
+        if self._exhaust_coordinator is None:
             return
-        if old_state is not None and old_state.state == new_state.state:
-            return
-        is_on = new_state.state == "on"
-        if self._exhaust_expected_state is not None and is_on == self._exhaust_expected_state:
-            self._exhaust_expected_state = None
-            return
-        if self.exhaust_manual_override_timeout > 0:
-            self._exhaust_manual_state = is_on
-            self._exhaust_manual_override_until = self.hass.loop.time() + self.exhaust_manual_override_timeout * 60
-        self.hass.async_create_task(self._async_tick(None))
+        if self._exhaust_coordinator.handle_state_changed(event):
+            for controller in list(self._exhaust_coordinator.controllers):
+                self.hass.async_create_task(controller._async_tick(None))
 
     def _async_save_option(self, key: str, value: Any) -> None:
         options = {**self.entry.options, key: value}
@@ -289,6 +383,8 @@ class PidWindowController:
         if self._unsub_exhaust_listener:
             self._unsub_exhaust_listener()
             self._unsub_exhaust_listener = None
+        if self._exhaust_coordinator is not None:
+            self._exhaust_coordinator.unregister(self)
 
     def register_listener(self, callback_fn: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(callback_fn)
@@ -361,6 +457,8 @@ class PidWindowController:
         self._exhaust_no_cooling_start_temp = None
 
     def _exhaust_is_on(self) -> bool | None:
+        if self._exhaust_coordinator is not None:
+            return self._exhaust_coordinator.is_on()
         if not self.exhaust_entity:
             return None
         state = self.hass.states.get(self.exhaust_entity)
@@ -389,23 +487,6 @@ class PidWindowController:
 
         return now - self._exhaust_no_cooling_started_at >= self.exhaust_no_cooling_timeout * 60
 
-    async def _set_exhaust_state(self, turn_on: bool) -> None:
-        if not self.exhaust_entity:
-            return
-        current = self._exhaust_is_on()
-        if current is not None and current == turn_on:
-            return
-        domain = self.exhaust_entity.split(".", 1)[0]
-        if domain not in {"fan", "switch"}:
-            return
-        self._exhaust_expected_state = turn_on
-        await self.hass.services.async_call(
-            domain,
-            "turn_on" if turn_on else "turn_off",
-            {"entity_id": self.exhaust_entity},
-            blocking=False,
-        )
-
     async def _async_update_exhaust(
         self,
         *,
@@ -417,7 +498,9 @@ class PidWindowController:
         now = self.hass.loop.time()
         is_on = self._exhaust_is_on()
 
-        if not self.exhaust_entity:
+        coordinator = self._exhaust_coordinator
+
+        if not self.exhaust_entity or coordinator is None:
             self.state.exhaust_status = "disabled"
             self._reset_exhaust_no_cooling()
             return
@@ -425,43 +508,38 @@ class PidWindowController:
         if self.exhaust_mode == COOLING_MODE_DISABLED:
             self.state.exhaust_status = "disabled"
             self._reset_exhaust_no_cooling()
+            coordinator.clear_request(self)
             return
 
         if is_on is None:
             self.state.exhaust_status = "unavailable"
             self._reset_exhaust_no_cooling()
+            coordinator.clear_request(self)
             return
 
-        if (
-            self._exhaust_manual_override_until is not None
-            and now < self._exhaust_manual_override_until
-        ):
-            self.state.exhaust_status = "manual_on" if self._exhaust_manual_state else "manual_off"
+        manual_status = coordinator.manual_status()
+        if manual_status is not None:
+            self.state.exhaust_status = manual_status
             self._reset_exhaust_no_cooling()
             return
-        self._exhaust_manual_override_until = None
-        self._exhaust_manual_state = None
 
         if self._exhaust_cooldown_until is not None and now < self._exhaust_cooldown_until:
             self.state.exhaust_status = "cooldown"
             self._reset_exhaust_no_cooling()
-            if is_on:
-                await self._set_exhaust_state(False)
+            await coordinator.async_request(self, False)
             return
         self._exhaust_cooldown_until = None
 
         if window_position is None or window_position < self.exhaust_min_window_position:
             self.state.exhaust_status = "blocked_by_window"
             self._reset_exhaust_no_cooling()
-            if is_on:
-                await self._set_exhaust_state(False)
+            await coordinator.async_request(self, False)
             return
 
         if self._ac_is_active():
             self.state.exhaust_status = "blocked_by_ac"
             self._reset_exhaust_no_cooling()
-            if is_on:
-                await self._set_exhaust_state(False)
+            await coordinator.async_request(self, False)
             return
 
         if self.exhaust_max_runtime > 0 and self._exhaust_auto_started_at is not None:
@@ -470,8 +548,7 @@ class PidWindowController:
                 self._exhaust_auto_started_at = None
                 self._exhaust_cooldown_until = now + self.exhaust_cooldown * 60
                 self._reset_exhaust_no_cooling()
-                if is_on:
-                    await self._set_exhaust_state(False)
+                await coordinator.async_request(self, False)
                 return
 
         temperature_allowed = (
@@ -491,15 +568,14 @@ class PidWindowController:
             self.state.exhaust_status = "co2_boost" if co2_needs_boost else "temperature_boost"
             if not is_on:
                 self._exhaust_auto_started_at = now
-                await self._set_exhaust_state(True)
             elif self._exhaust_auto_started_at is None:
                 self._exhaust_auto_started_at = now
+            await coordinator.async_request(self, True)
             return
 
         self.state.exhaust_status = "auto_waiting" if temperature_allowed else "idle"
         self._exhaust_auto_started_at = None
-        if is_on:
-            await self._set_exhaust_state(False)
+        await coordinator.async_request(self, False)
 
     def _track_co2_no_effect(self, co2: float | None, final_position: float) -> bool:
         if (
@@ -906,8 +982,8 @@ class PidWindowController:
             mode = DEFAULT_EXHAUST_MODE
         self.exhaust_mode = mode
         self._async_save_option(CONF_EXHAUST_MODE, mode)
-        self._exhaust_manual_override_until = None
-        self._exhaust_manual_state = None
+        if self._exhaust_coordinator is not None:
+            self._exhaust_coordinator.clear_request(self)
         self._notify()
         await self._async_tick(None)
 

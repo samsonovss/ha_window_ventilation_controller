@@ -136,6 +136,8 @@ For CO₂, the fan can turn on when CO₂ ventilation is active and the window i
 
 Manual fan control has priority in `auto`: if you turn the fan entity on or off manually, the integration holds that manual state for `Fan manual override timeout` before auto control resumes.
 
+The same physical fan can be selected in several Ventilation Controller entries. Fan requests are shared by entity ID: the fan is turned on when at least one room requests airflow boost, and it is turned off only when no room requests it anymore. If the fan is selected in only one entry, behavior is the same as a single local fan.
+
 ## PID Behavior
 
 The PID calculation follows the same style as `node-red-contrib-pid`:
@@ -246,6 +248,7 @@ Copy `custom_components/ventilation_controller` to `/config/custom_components/ve
 - AC protection never turns the AC on or off; it only reacts to the selected climate entity state.
 - CO₂ ventilation never controls the window separately; it only participates in the final position calculation.
 - Fan assist never changes the PID output or window target; it only turns the selected fan/switch on or off.
+- The same fan/switch may be reused by several rooms; requests are coordinated so one room does not turn the fan off while another room still needs it.
 
 ## Authors
 
