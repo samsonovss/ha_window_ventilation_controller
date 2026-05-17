@@ -12,9 +12,9 @@ It works well for Drivent window actuators, but it is not tied to Drivent. Any H
 
 The idea is simple: the integration opens the window only when it is useful.
 
-It watches the room temperature, optional outdoor temperature, target temperature, optional AC state, and optional CO₂ level. If outdoor air can actually cool the room, the controller can open the window. If the outdoor air is not useful, it keeps the window closed. If the AC is running, it can close the window so you do not cool the street. If CO₂ gets high, it can add a ventilation minimum without fighting the temperature PID.
+It watches the room temperature, optional outdoor temperature, target temperature, optional AC state, optional CO₂ level, and optional exhaust fan. If outdoor air can actually cool the room, the controller can open the window. If the outdoor air is not useful, it keeps the window closed. If the AC is running, it can close the window so you do not cool the street. If CO₂ gets high, it can add a ventilation minimum without fighting the temperature PID. If the window is already open but natural airflow is not enough, it can use an exhaust fan or switch as a booster.
 
-In plain English: this is smart ventilation for Home Assistant. The window opens when it helps, stays closed when it does not, and still exposes enough diagnostics to understand why.
+In plain English: this is smart ventilation for Home Assistant. The window opens when it helps, stays closed when it does not, and an optional exhaust fan can help move air when the open window alone is not enough. The integration still exposes enough diagnostics to understand why it did what it did.
 
 ## Contents
 
