@@ -1,5 +1,5 @@
 {
-  "name": "PID Window Controller",
+  "name": "Window Ventilation Controller",
   "content_in_root": false,
   "domains": ["pid_window"]
 }

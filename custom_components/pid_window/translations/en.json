@@ -1,9 +1,9 @@
 {
-  "title": "PID Window Controller",
+  "title": "Window Ventilation Controller",
   "config": {
     "step": {
       "user": {
-        "title": "Configure PID Window Controller",
+        "title": "Configure Window Ventilation Controller",
         "data": {
           "name": "Name",
           "temp_sensor": "Room",
@@ -30,7 +30,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure PID Window Controller",
+        "title": "Configure Window Ventilation Controller",
         "data": {
           "name": "Name",
           "temp_sensor": "Room",

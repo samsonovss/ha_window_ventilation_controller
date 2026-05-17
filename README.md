@@ -1,8 +1,8 @@
-# PID Window Controller
+# Window Ventilation Controller
 
-Home Assistant custom integration for controlling a motorized window/cover with PID.
+Home Assistant custom integration for smart ventilation through a motorized window/cover.
 
-The integration is designed for cooling a room with outside air: it reads indoor temperature, optionally reads outdoor temperature, and moves a `cover` entity between 0–100% to keep the room near the target temperature.
+The integration is designed for cooling and ventilation with outside air: it reads indoor temperature, optionally reads outdoor temperature, AC state, and CO₂, then moves a `cover` entity between 0–100% to keep the room near the target temperature and improve air quality.
 
 ## Features
 
@@ -11,6 +11,7 @@ The integration is designed for cooling a room with outside air: it reads indoor
 - Controlled window/cover entity selection
 - Optional outdoor temperature sensor for automatic cooling permission
 - Optional AC climate entity selection with conflict protection
+- Optional CO₂ sensor with ventilation assist
 - Node-RED-style PID tuning: proportional band, integral time, derivative time
 - Cooling modes: `disabled`, `force`, `auto`
 - Cooling delta sensor: `current_temp - outdoor_temp`
@@ -18,6 +19,7 @@ The integration is designed for cooling a room with outside air: it reads indoor
 - Temperature deadband to avoid unnecessary movement near target
 - Position change threshold to avoid tiny cover updates
 - Controller status sensor for debugging/automation
+- CO₂ status sensor for ventilation diagnostics
 
 ## Cooling modes
 
@@ -157,7 +159,7 @@ Removed legacy/debug entities:
 
 1. Open HACS.
 2. Add this repository as a custom integration repository.
-3. Install **PID Window Controller**.
+3. Install **Window Ventilation Controller**.
 4. Restart Home Assistant.
 5. Go to **Settings → Devices & services → Add integration**.
 6. Select the room sensor, optional outdoor sensor, and target window/door cover.

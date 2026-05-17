@@ -1,4 +1,4 @@
-"""Numbers for PID Window Controller."""
+"""Numbers for Window Ventilation Controller."""
 
 from __future__ import annotations
 

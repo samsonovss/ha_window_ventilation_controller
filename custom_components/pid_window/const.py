@@ -1,4 +1,4 @@
-"""Constants for PID Window Controller."""
+"""Constants for Window Ventilation Controller."""
 
 DOMAIN = "pid_window"
 CONF_NAME = "name"
@@ -40,7 +40,7 @@ PID_PROFILE_SOFT = "soft"
 PID_PROFILE_NORMAL = "normal"
 PID_PROFILE_AGGRESSIVE = "aggressive"
 
-DEFAULT_NAME = "PID Window Controller"
+DEFAULT_NAME = "Window Ventilation Controller"
 DEFAULT_COOLING_MODE = COOLING_MODE_AUTO
 DEFAULT_TARGET_TEMP = 24.0
 DEFAULT_KP = 6.0
