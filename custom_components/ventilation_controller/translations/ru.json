@@ -89,7 +89,7 @@
         }
       },
       "pid_profile": {
-        "name": "Профиль PID",
+        "name": "Профиль PID окна",
         "state": {
           "soft": "Мягкий",
           "normal": "Нормальный",
