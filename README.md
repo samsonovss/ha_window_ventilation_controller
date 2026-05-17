@@ -6,6 +6,19 @@
   <img src="assets/banner-en.png" alt="Window Ventilation Controller" width="100%">
 </p>
 
+## Contents
+
+- [What It Can Do](#what-it-can-do)
+- [How It Works](#how-it-works)
+- [Cooling Modes](#cooling-modes)
+- [CO₂ Ventilation Assist](#co₂-ventilation-assist)
+- [PID Behavior](#pid-behavior)
+- [Controller Status](#controller-status)
+- [Settings And Entities](#settings-and-entities)
+- [Installation](#installation)
+- [Notes](#notes)
+- [Authors](#authors)
+
 Window Ventilation Controller is a Home Assistant custom integration for rooms with a motorized window, door, damper, or any other `cover` entity that can be positioned from 0 to 100%.
 
 It works well for Drivent window actuators, but it is not tied to Drivent. Any Home Assistant `cover` entity with 0-100% position control can be used.
@@ -190,3 +203,7 @@ Copy `custom_components/window_ventilation` to `/config/custom_components/window
 - `auto` mode requires an outdoor sensor.
 - AC protection never turns the AC on or off; it only reacts to the selected climate entity state.
 - CO₂ ventilation never controls the window separately; it only participates in the final position calculation.
+
+## Authors
+
+Created by [@samsonovss](https://github.com/samsonovss) with help from Shade, an OpenClaw personal AI agent.
