@@ -29,6 +29,8 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
             PidWindowSensor(controller, entry.entry_id, "co2_position", "%"),
             PidWindowSensor(controller, entry.entry_id, "co2_status", None, is_text=True),
         ])
+    if controller.exhaust_entity:
+        sensors.append(PidWindowSensor(controller, entry.entry_id, "exhaust_status", None, is_text=True))
     async_add_entities(sensors)
 
 
@@ -64,7 +66,7 @@ class PidWindowSensor(SensorEntity):
         elif key == "co2_position":
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_icon = "mdi:window-open-variant"
-        elif key in {"status", "co2_status"}:
+        elif key in {"status", "co2_status", "exhaust_status"}:
             self._attr_icon = "mdi:information-outline"
 
     async def async_added_to_hass(self) -> None:

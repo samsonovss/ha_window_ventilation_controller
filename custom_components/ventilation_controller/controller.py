@@ -28,6 +28,14 @@ from .const import (
     CONF_COOLING_DELTA_HYSTERESIS,
     CONF_COOLING_DELTA_THRESHOLD,
     CONF_COOLING_MODE,
+    CONF_EXHAUST_COOLDOWN,
+    CONF_EXHAUST_ENTITY,
+    CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT,
+    CONF_EXHAUST_MAX_RUNTIME,
+    CONF_EXHAUST_MIN_TEMP_DROP,
+    CONF_EXHAUST_MIN_WINDOW_POSITION,
+    CONF_EXHAUST_MODE,
+    CONF_EXHAUST_NO_COOLING_TIMEOUT,
     CONF_KD,
     CONF_KI,
     CONF_KP,
@@ -54,6 +62,13 @@ from .const import (
     DEFAULT_CO2_VENTILATION,
     DEFAULT_CO2_VENTILATION_POSITION,
     DEFAULT_COOLING_MODE,
+    DEFAULT_EXHAUST_COOLDOWN,
+    DEFAULT_EXHAUST_MANUAL_OVERRIDE_TIMEOUT,
+    DEFAULT_EXHAUST_MAX_RUNTIME,
+    DEFAULT_EXHAUST_MIN_TEMP_DROP,
+    DEFAULT_EXHAUST_MIN_WINDOW_POSITION,
+    DEFAULT_EXHAUST_MODE,
+    DEFAULT_EXHAUST_NO_COOLING_TIMEOUT,
     DEFAULT_KD,
     DEFAULT_KI,
     DEFAULT_KP,
@@ -90,6 +105,7 @@ class ControllerState:
     enabled: bool = True
     status: str = "idle"
     co2_status: str = "disabled"
+    exhaust_status: str = "disabled"
 
 
 class PidWindowController:
@@ -105,6 +121,7 @@ class PidWindowController:
         self.cover_entity = options.get(CONF_COVER_ENTITY, data[CONF_COVER_ENTITY])
         self.ac_climate_entity = options.get(CONF_AC_CLIMATE_ENTITY, data.get(CONF_AC_CLIMATE_ENTITY)) or None
         self.co2_sensor = options.get(CONF_CO2_SENSOR, data.get(CONF_CO2_SENSOR)) or None
+        self.exhaust_entity = options.get(CONF_EXHAUST_ENTITY, data.get(CONF_EXHAUST_ENTITY)) or None
         self.ac_conflict_protection = bool(
             options.get(
                 CONF_AC_CONFLICT_PROTECTION,
@@ -144,6 +161,15 @@ class PidWindowController:
         self.co2_indoor_guard_margin = float(options.get(CONF_CO2_INDOOR_GUARD_MARGIN, data.get(CONF_CO2_INDOOR_GUARD_MARGIN, DEFAULT_CO2_INDOOR_GUARD_MARGIN)))
         self.co2_cold_outdoor_threshold = float(options.get(CONF_CO2_COLD_OUTDOOR_THRESHOLD, data.get(CONF_CO2_COLD_OUTDOOR_THRESHOLD, DEFAULT_CO2_COLD_OUTDOOR_THRESHOLD)))
         self.co2_cold_max_position = float(options.get(CONF_CO2_COLD_MAX_POSITION, data.get(CONF_CO2_COLD_MAX_POSITION, DEFAULT_CO2_COLD_MAX_POSITION)))
+        self.exhaust_mode = str(options.get(CONF_EXHAUST_MODE, data.get(CONF_EXHAUST_MODE, DEFAULT_EXHAUST_MODE)))
+        if self.exhaust_mode not in {COOLING_MODE_DISABLED, COOLING_MODE_AUTO}:
+            self.exhaust_mode = DEFAULT_EXHAUST_MODE
+        self.exhaust_min_window_position = float(options.get(CONF_EXHAUST_MIN_WINDOW_POSITION, data.get(CONF_EXHAUST_MIN_WINDOW_POSITION, DEFAULT_EXHAUST_MIN_WINDOW_POSITION)))
+        self.exhaust_no_cooling_timeout = int(options.get(CONF_EXHAUST_NO_COOLING_TIMEOUT, data.get(CONF_EXHAUST_NO_COOLING_TIMEOUT, DEFAULT_EXHAUST_NO_COOLING_TIMEOUT)))
+        self.exhaust_min_temp_drop = float(options.get(CONF_EXHAUST_MIN_TEMP_DROP, data.get(CONF_EXHAUST_MIN_TEMP_DROP, DEFAULT_EXHAUST_MIN_TEMP_DROP)))
+        self.exhaust_max_runtime = int(options.get(CONF_EXHAUST_MAX_RUNTIME, data.get(CONF_EXHAUST_MAX_RUNTIME, DEFAULT_EXHAUST_MAX_RUNTIME)))
+        self.exhaust_cooldown = int(options.get(CONF_EXHAUST_COOLDOWN, data.get(CONF_EXHAUST_COOLDOWN, DEFAULT_EXHAUST_COOLDOWN)))
+        self.exhaust_manual_override_timeout = int(options.get(CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT, data.get(CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT, DEFAULT_EXHAUST_MANUAL_OVERRIDE_TIMEOUT)))
         configured_pid_profile = options.get(CONF_PID_PROFILE, data.get(CONF_PID_PROFILE))
         if configured_pid_profile is None:
             self.pid_profile = self._matching_pid_profile()
@@ -157,6 +183,7 @@ class PidWindowController:
         self._unsub_interval = None
         self._unsub_ac_listener = None
         self._unsub_co2_listener = None
+        self._unsub_exhaust_listener = None
         self._enabled = True
         self._integral = 0.0
         self._previous_error: float | None = None
@@ -169,6 +196,13 @@ class PidWindowController:
         self._co2_ventilation_active = False
         self._co2_no_effect_started_at: float | None = None
         self._co2_no_effect_start_value: float | None = None
+        self._exhaust_no_cooling_started_at: float | None = None
+        self._exhaust_no_cooling_start_temp: float | None = None
+        self._exhaust_auto_started_at: float | None = None
+        self._exhaust_cooldown_until: float | None = None
+        self._exhaust_manual_override_until: float | None = None
+        self._exhaust_manual_state: bool | None = None
+        self._exhaust_expected_state: bool | None = None
         self._last_power = 0.0
 
     @property
@@ -190,6 +224,8 @@ class PidWindowController:
             self._unsub_ac_listener = self.hass.bus.async_listen("state_changed", self._async_ac_state_changed)
         if self.co2_sensor:
             self._unsub_co2_listener = self.hass.bus.async_listen("state_changed", self._async_co2_state_changed)
+        if self.exhaust_entity:
+            self._unsub_exhaust_listener = self.hass.bus.async_listen("state_changed", self._async_exhaust_state_changed)
         await self._async_tick(None)
 
     def _async_ac_state_changed(self, event: Event) -> None:
@@ -200,6 +236,24 @@ class PidWindowController:
     def _async_co2_state_changed(self, event: Event) -> None:
         if event.data.get("entity_id") != self.co2_sensor:
             return
+        self.hass.async_create_task(self._async_tick(None))
+
+    def _async_exhaust_state_changed(self, event: Event) -> None:
+        if event.data.get("entity_id") != self.exhaust_entity:
+            return
+        old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
+        if new_state is None or new_state.state in {STATE_UNKNOWN, STATE_UNAVAILABLE, "none"}:
+            return
+        if old_state is not None and old_state.state == new_state.state:
+            return
+        is_on = new_state.state == "on"
+        if self._exhaust_expected_state is not None and is_on == self._exhaust_expected_state:
+            self._exhaust_expected_state = None
+            return
+        if self.exhaust_manual_override_timeout > 0:
+            self._exhaust_manual_state = is_on
+            self._exhaust_manual_override_until = self.hass.loop.time() + self.exhaust_manual_override_timeout * 60
         self.hass.async_create_task(self._async_tick(None))
 
     def _async_save_option(self, key: str, value: Any) -> None:
@@ -232,6 +286,9 @@ class PidWindowController:
         if self._unsub_co2_listener:
             self._unsub_co2_listener()
             self._unsub_co2_listener = None
+        if self._unsub_exhaust_listener:
+            self._unsub_exhaust_listener()
+            self._unsub_exhaust_listener = None
 
     def register_listener(self, callback_fn: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(callback_fn)
@@ -298,6 +355,151 @@ class PidWindowController:
     def _reset_co2_no_effect(self) -> None:
         self._co2_no_effect_started_at = None
         self._co2_no_effect_start_value = None
+
+    def _reset_exhaust_no_cooling(self) -> None:
+        self._exhaust_no_cooling_started_at = None
+        self._exhaust_no_cooling_start_temp = None
+
+    def _exhaust_is_on(self) -> bool | None:
+        if not self.exhaust_entity:
+            return None
+        state = self.hass.states.get(self.exhaust_entity)
+        if state is None or state.state in {STATE_UNKNOWN, STATE_UNAVAILABLE, "none"}:
+            return None
+        return state.state == "on"
+
+    def _track_exhaust_no_cooling(self, current_temp: float, window_position: float) -> bool:
+        if (
+            self.exhaust_no_cooling_timeout <= 0
+            or window_position < self.exhaust_min_window_position
+        ):
+            self._reset_exhaust_no_cooling()
+            return False
+
+        now = self.hass.loop.time()
+        if self._exhaust_no_cooling_started_at is None or self._exhaust_no_cooling_start_temp is None:
+            self._exhaust_no_cooling_started_at = now
+            self._exhaust_no_cooling_start_temp = current_temp
+            return False
+
+        if current_temp <= self._exhaust_no_cooling_start_temp - self.exhaust_min_temp_drop:
+            self._exhaust_no_cooling_started_at = now
+            self._exhaust_no_cooling_start_temp = current_temp
+            return False
+
+        return now - self._exhaust_no_cooling_started_at >= self.exhaust_no_cooling_timeout * 60
+
+    async def _set_exhaust_state(self, turn_on: bool) -> None:
+        if not self.exhaust_entity:
+            return
+        current = self._exhaust_is_on()
+        if current is not None and current == turn_on:
+            return
+        domain = self.exhaust_entity.split(".", 1)[0]
+        if domain not in {"fan", "switch"}:
+            return
+        self._exhaust_expected_state = turn_on
+        await self.hass.services.async_call(
+            domain,
+            "turn_on" if turn_on else "turn_off",
+            {"entity_id": self.exhaust_entity},
+            blocking=False,
+        )
+
+    async def _async_update_exhaust(
+        self,
+        *,
+        current_temp: float | None,
+        cooling_delta: float | None,
+        window_position: float | None,
+        co2_active: bool,
+    ) -> None:
+        now = self.hass.loop.time()
+        is_on = self._exhaust_is_on()
+
+        if not self.exhaust_entity:
+            self.state.exhaust_status = "disabled"
+            self._reset_exhaust_no_cooling()
+            return
+
+        if self.exhaust_mode == COOLING_MODE_DISABLED:
+            self.state.exhaust_status = "disabled"
+            self._reset_exhaust_no_cooling()
+            return
+
+        if is_on is None:
+            self.state.exhaust_status = "unavailable"
+            self._reset_exhaust_no_cooling()
+            return
+
+        if (
+            self._exhaust_manual_override_until is not None
+            and now < self._exhaust_manual_override_until
+        ):
+            self.state.exhaust_status = "manual_on" if self._exhaust_manual_state else "manual_off"
+            self._reset_exhaust_no_cooling()
+            return
+        self._exhaust_manual_override_until = None
+        self._exhaust_manual_state = None
+
+        if self._exhaust_cooldown_until is not None and now < self._exhaust_cooldown_until:
+            self.state.exhaust_status = "cooldown"
+            self._reset_exhaust_no_cooling()
+            if is_on:
+                await self._set_exhaust_state(False)
+            return
+        self._exhaust_cooldown_until = None
+
+        if window_position is None or window_position < self.exhaust_min_window_position:
+            self.state.exhaust_status = "blocked_by_window"
+            self._reset_exhaust_no_cooling()
+            if is_on:
+                await self._set_exhaust_state(False)
+            return
+
+        if self._ac_is_active():
+            self.state.exhaust_status = "blocked_by_ac"
+            self._reset_exhaust_no_cooling()
+            if is_on:
+                await self._set_exhaust_state(False)
+            return
+
+        if self.exhaust_max_runtime > 0 and self._exhaust_auto_started_at is not None:
+            if now - self._exhaust_auto_started_at >= self.exhaust_max_runtime * 60:
+                self.state.exhaust_status = "max_runtime"
+                self._exhaust_auto_started_at = None
+                self._exhaust_cooldown_until = now + self.exhaust_cooldown * 60
+                self._reset_exhaust_no_cooling()
+                if is_on:
+                    await self._set_exhaust_state(False)
+                return
+
+        temperature_allowed = (
+            current_temp is not None
+            and current_temp > self.target_temp + self.temp_deadband
+            and cooling_delta is not None
+            and cooling_delta >= self.cooling_delta_threshold
+            and self.cooling_mode in {COOLING_MODE_AUTO, COOLING_MODE_FORCE}
+        )
+        temperature_needs_boost = (
+            temperature_allowed
+            and self._track_exhaust_no_cooling(current_temp, window_position)
+        )
+        co2_needs_boost = bool(co2_active)
+
+        if temperature_needs_boost or co2_needs_boost:
+            self.state.exhaust_status = "co2_boost" if co2_needs_boost else "temperature_boost"
+            if not is_on:
+                self._exhaust_auto_started_at = now
+                await self._set_exhaust_state(True)
+            elif self._exhaust_auto_started_at is None:
+                self._exhaust_auto_started_at = now
+            return
+
+        self.state.exhaust_status = "auto_waiting" if temperature_allowed else "idle"
+        self._exhaust_auto_started_at = None
+        if is_on:
+            await self._set_exhaust_state(False)
 
     def _track_co2_no_effect(self, co2: float | None, final_position: float) -> bool:
         if (
@@ -417,11 +619,23 @@ class PidWindowController:
             self._reset_co2_no_effect()
             if cover_available:
                 await self._set_cover_position(float(self.min_position))
+            await self._async_update_exhaust(
+                current_temp=None,
+                cooling_delta=cooling_delta,
+                window_position=float(self.min_position) if cover_available else cover_position,
+                co2_active=False,
+            )
             self._notify()
             return
 
         if not cover_available:
             self.state.status = "cover_unavailable"
+            await self._async_update_exhaust(
+                current_temp=current_temp,
+                cooling_delta=cooling_delta,
+                window_position=None,
+                co2_active=False,
+            )
             self._notify()
             return
 
@@ -440,6 +654,12 @@ class PidWindowController:
             self.state.pid_output = float(self.min_position)
             self.state.status = "ac_active_window_closed"
             await self._set_cover_position(float(self.min_position), force=True)
+            await self._async_update_exhaust(
+                current_temp=current_temp,
+                cooling_delta=cooling_delta,
+                window_position=float(self.min_position),
+                co2_active=False,
+            )
             self._notify()
             return
 
@@ -451,6 +671,12 @@ class PidWindowController:
             self.state.pid_output = float(self.min_position)
             self.state.status = "disabled"
             await self._set_cover_position(float(self.min_position), force=True)
+            await self._async_update_exhaust(
+                current_temp=current_temp,
+                cooling_delta=cooling_delta,
+                window_position=float(self.min_position),
+                co2_active=False,
+            )
             self._notify()
             return
 
@@ -463,6 +689,12 @@ class PidWindowController:
                 self.state.pid_output = float(self.min_position)
                 self.state.status = "outdoor_sensor_unavailable"
                 await self._set_cover_position(float(self.min_position))
+                await self._async_update_exhaust(
+                    current_temp=current_temp,
+                    cooling_delta=cooling_delta,
+                    window_position=float(self.min_position),
+                    co2_active=False,
+                )
                 self._notify()
                 return
 
@@ -478,6 +710,12 @@ class PidWindowController:
                 self.state.pid_output = float(self.min_position)
                 self.state.status = "auto_blocked_by_delta"
                 await self._set_cover_position(float(self.min_position))
+                await self._async_update_exhaust(
+                    current_temp=current_temp,
+                    cooling_delta=cooling_delta,
+                    window_position=float(self.min_position),
+                    co2_active=False,
+                )
                 self._notify()
                 return
 
@@ -490,6 +728,12 @@ class PidWindowController:
             self.state.pid_output = target_position
             self.state.status = "idle"
             await self._set_cover_position(target_position)
+            await self._async_update_exhaust(
+                current_temp=current_temp,
+                cooling_delta=cooling_delta,
+                window_position=target_position,
+                co2_active=False,
+            )
             self._notify()
             return
 
@@ -499,6 +743,12 @@ class PidWindowController:
             if co2_min_position is None:
                 self.state.status = "deadband"
                 self._reset_co2_no_effect()
+                await self._async_update_exhaust(
+                    current_temp=current_temp,
+                    cooling_delta=cooling_delta,
+                    window_position=cover_position,
+                    co2_active=False,
+                )
                 self._notify()
                 return
             pid_position = float(cover_position if cover_position is not None else self.min_position)
@@ -509,6 +759,12 @@ class PidWindowController:
                 self.state.status = "co2_no_effect"
                 self.state.co2_status = "co2_no_effect"
             await self._set_cover_position(target_position)
+            await self._async_update_exhaust(
+                current_temp=current_temp,
+                cooling_delta=cooling_delta,
+                window_position=target_position,
+                co2_active=self.state.co2_status in {"co2_ventilating", "co2_no_effect"},
+            )
             self._notify()
             return
 
@@ -576,6 +832,12 @@ class PidWindowController:
             self.state.status = "co2_no_effect"
             self.state.co2_status = "co2_no_effect"
         await self._set_cover_position(output)
+        await self._async_update_exhaust(
+            current_temp=current_temp,
+            cooling_delta=cooling_delta,
+            window_position=output,
+            co2_active=self.state.co2_status in {"co2_ventilating", "co2_no_effect"},
+        )
         self._notify()
 
     async def _set_cover_position(self, position: float, *, force: bool = False) -> None:
@@ -636,6 +898,16 @@ class PidWindowController:
     async def async_set_co2_ventilation(self, enabled: bool) -> None:
         self.co2_ventilation = bool(enabled)
         self._async_save_option(CONF_CO2_VENTILATION, self.co2_ventilation)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_exhaust_mode(self, mode: str) -> None:
+        if mode not in {COOLING_MODE_DISABLED, COOLING_MODE_AUTO}:
+            mode = DEFAULT_EXHAUST_MODE
+        self.exhaust_mode = mode
+        self._async_save_option(CONF_EXHAUST_MODE, mode)
+        self._exhaust_manual_override_until = None
+        self._exhaust_manual_state = None
         self._notify()
         await self._async_tick(None)
 
@@ -706,6 +978,19 @@ class PidWindowController:
 
     async def async_set_co2_number(self, key: str, value: float) -> None:
         if key == CONF_CO2_NO_EFFECT_TIMEOUT:
+            value = int(value)
+        setattr(self, key, value)
+        self._async_save_option(key, value)
+        self._notify()
+        await self._async_tick(None)
+
+    async def async_set_exhaust_number(self, key: str, value: float) -> None:
+        if key in {
+            CONF_EXHAUST_NO_COOLING_TIMEOUT,
+            CONF_EXHAUST_MAX_RUNTIME,
+            CONF_EXHAUST_COOLDOWN,
+            CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT,
+        }:
             value = int(value)
         setattr(self, key, value)
         self._async_save_option(key, value)

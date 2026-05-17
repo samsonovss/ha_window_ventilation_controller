@@ -37,6 +37,17 @@ _CO2_ENTITY_UNIQUE_IDS = (
     "co2_cold_max_position",
 )
 
+_EXHAUST_ENTITY_UNIQUE_IDS = (
+    "exhaust_mode",
+    "exhaust_status",
+    "exhaust_min_window_position",
+    "exhaust_no_cooling_timeout",
+    "exhaust_min_temp_drop",
+    "exhaust_max_runtime",
+    "exhaust_cooldown",
+    "exhaust_manual_override_timeout",
+)
+
 
 _OLD_ENTITY_UNIQUE_IDS = (
     "winter_kp",
@@ -68,6 +79,8 @@ _ENTITY_CATEGORY_BY_UNIQUE_KEY = {
     "pid_profile": EntityCategory.CONFIG,
     "ac_conflict_protection": None,
     "co2_ventilation": None,
+    "exhaust_mode": None,
+    "exhaust_status": None,
     "current_temp": None,
     "outdoor_temp": None,
     "co2": None,
@@ -91,6 +104,12 @@ _ENTITY_CATEGORY_BY_UNIQUE_KEY = {
     "co2_indoor_guard_margin": EntityCategory.CONFIG,
     "co2_cold_outdoor_threshold": EntityCategory.CONFIG,
     "co2_cold_max_position": EntityCategory.CONFIG,
+    "exhaust_min_window_position": EntityCategory.CONFIG,
+    "exhaust_no_cooling_timeout": EntityCategory.CONFIG,
+    "exhaust_min_temp_drop": EntityCategory.CONFIG,
+    "exhaust_max_runtime": EntityCategory.CONFIG,
+    "exhaust_cooldown": EntityCategory.CONFIG,
+    "exhaust_manual_override_timeout": EntityCategory.CONFIG,
     "cooling_delta": EntityCategory.DIAGNOSTIC,
     "pid_output": EntityCategory.DIAGNOSTIC,
     "co2_position": EntityCategory.DIAGNOSTIC,
@@ -111,8 +130,10 @@ _ENTITY_DOMAIN_BY_UNIQUE_KEY = {
     "pid_profile": "select",
     "ac_conflict_protection": "switch",
     "co2_ventilation": "select",
+    "exhaust_mode": "select",
     "status": "sensor",
     "co2_status": "sensor",
+    "exhaust_status": "sensor",
     "co2": "sensor",
     "cooling_delta": "sensor",
     "error": "sensor",
@@ -129,6 +150,12 @@ _ENTITY_DOMAIN_BY_UNIQUE_KEY = {
     "co2_indoor_guard_margin": "number",
     "co2_cold_outdoor_threshold": "number",
     "co2_cold_max_position": "number",
+    "exhaust_min_window_position": "number",
+    "exhaust_no_cooling_timeout": "number",
+    "exhaust_min_temp_drop": "number",
+    "exhaust_max_runtime": "number",
+    "exhaust_cooldown": "number",
+    "exhaust_manual_override_timeout": "number",
     "window": "cover",
 }
 
@@ -201,7 +228,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old profile-based PID settings and remove deprecated entities."""
     data = _migrate_pid_options(entry.data, fill_defaults=True)
     options = _migrate_pid_options(entry.options)
-    hass.config_entries.async_update_entry(entry, data=data, options=options, version=8)
+    hass.config_entries.async_update_entry(entry, data=data, options=options, version=9)
 
     registry = er.async_get(hass)
     for old_key in _OLD_ENTITY_UNIQUE_IDS:
@@ -241,6 +268,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _remove_entities_by_unique_keys(registry, entry.entry_id, _AC_ENTITY_UNIQUE_IDS)
     if controller.co2_sensor is None:
         _remove_entities_by_unique_keys(registry, entry.entry_id, _CO2_ENTITY_UNIQUE_IDS)
+    if controller.exhaust_entity is None:
+        _remove_entities_by_unique_keys(registry, entry.entry_id, _EXHAUST_ENTITY_UNIQUE_IDS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

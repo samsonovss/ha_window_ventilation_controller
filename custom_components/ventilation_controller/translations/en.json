@@ -11,6 +11,7 @@
           "outdoor_sensor": "Outdoor temperature",
           "ac_climate_entity": "Air conditioner",
           "co2_sensor": "CO₂",
+          "exhaust_entity": "Fan exhaust entity",
           "target_temp": "Target temperature",
           "kp": "Proportional band",
           "ki": "Integral time",
@@ -38,6 +39,7 @@
           "outdoor_sensor": "Outdoor temperature",
           "ac_climate_entity": "Air conditioner",
           "co2_sensor": "CO₂",
+          "exhaust_entity": "Fan exhaust entity",
           "target_temp": "Target temperature",
           "kp": "Proportional band",
           "ki": "Integral time",
@@ -101,6 +103,13 @@
           "disabled": "Disabled",
           "auto": "Auto"
         }
+      },
+      "exhaust_mode": {
+        "name": "Fan mode",
+        "state": {
+          "disabled": "Disabled",
+          "auto": "Auto"
+        }
       }
     },
     "number": {
@@ -120,7 +129,13 @@
       "co2_minimum_drop": { "name": "CO₂ minimum drop" },
       "co2_indoor_guard_margin": { "name": "CO₂ indoor guard margin" },
       "co2_cold_outdoor_threshold": { "name": "CO₂ cold outdoor threshold" },
-      "co2_cold_max_position": { "name": "CO₂ cold max position" }
+      "co2_cold_max_position": { "name": "CO₂ cold max position" },
+      "exhaust_min_window_position": { "name": "Fan minimum window position" },
+      "exhaust_no_cooling_timeout": { "name": "Fan no cooling timeout" },
+      "exhaust_min_temp_drop": { "name": "Fan minimum temperature drop" },
+      "exhaust_max_runtime": { "name": "Fan max runtime" },
+      "exhaust_cooldown": { "name": "Fan cooldown" },
+      "exhaust_manual_override_timeout": { "name": "Fan manual override timeout" }
     },
     "cover": {
       "window": { "name": "Window" }
@@ -160,6 +175,23 @@
           "co2_blocked_by_ac": "CO₂: AC",
           "co2_blocked_by_temperature": "CO₂: room near target",
           "co2_no_effect": "CO₂ not dropping"
+        }
+      },
+      "exhaust_status": {
+        "name": "Fan status",
+        "state": {
+          "disabled": "Disabled",
+          "unavailable": "Unavailable",
+          "idle": "Idle",
+          "auto_waiting": "Waiting for effect",
+          "temperature_boost": "Temperature boost",
+          "co2_boost": "CO₂ boost",
+          "manual_on": "Manual on",
+          "manual_off": "Manual off",
+          "cooldown": "Cooldown",
+          "blocked_by_ac": "Blocked by AC",
+          "blocked_by_window": "Blocked by window",
+          "max_runtime": "Max runtime"
         }
       },
       "co2": { "name": "CO₂" },

@@ -11,6 +11,7 @@
           "outdoor_sensor": "Температура на улице",
           "ac_climate_entity": "Кондиционер",
           "co2_sensor": "CO₂",
+          "exhaust_entity": "Fan вытяжка",
           "target_temp": "Целевая температура",
           "kp": "Пропорциональная зона",
           "ki": "Время интегрирования",
@@ -38,6 +39,7 @@
           "outdoor_sensor": "Температура на улице",
           "ac_climate_entity": "Кондиционер",
           "co2_sensor": "CO₂",
+          "exhaust_entity": "Fan вытяжка",
           "target_temp": "Целевая температура",
           "kp": "Пропорциональная зона",
           "ki": "Время интегрирования",
@@ -101,6 +103,13 @@
           "disabled": "Выключено",
           "auto": "Авто"
         }
+      },
+      "exhaust_mode": {
+        "name": "Fan режим",
+        "state": {
+          "disabled": "Выключено",
+          "auto": "Авто"
+        }
       }
     },
     "number": {
@@ -120,7 +129,13 @@
       "co2_minimum_drop": { "name": "CO₂ Минимальное снижение" },
       "co2_indoor_guard_margin": { "name": "CO₂ Защита по температуре" },
       "co2_cold_outdoor_threshold": { "name": "CO₂ Холодная улица" },
-      "co2_cold_max_position": { "name": "CO₂ Макс. окно при холодной улице" }
+      "co2_cold_max_position": { "name": "CO₂ Макс. окно при холодной улице" },
+      "exhaust_min_window_position": { "name": "Fan Минимальная позиция окна" },
+      "exhaust_no_cooling_timeout": { "name": "Fan Таймаут без охлаждения" },
+      "exhaust_min_temp_drop": { "name": "Fan Минимальное снижение температуры" },
+      "exhaust_max_runtime": { "name": "Fan Максимальное время работы" },
+      "exhaust_cooldown": { "name": "Fan Пауза после работы" },
+      "exhaust_manual_override_timeout": { "name": "Fan Таймаут ручного управления" }
     },
     "cover": {
       "window": { "name": "Окно" }
@@ -160,6 +175,23 @@
           "co2_blocked_by_ac": "CO₂: кондиционер",
           "co2_blocked_by_temperature": "CO₂: комната у цели",
           "co2_no_effect": "CO₂ не снижается"
+        }
+      },
+      "exhaust_status": {
+        "name": "Fan статус",
+        "state": {
+          "disabled": "Выключено",
+          "unavailable": "Недоступна",
+          "idle": "Ожидание",
+          "auto_waiting": "Ожидание эффекта",
+          "temperature_boost": "Усиление охлаждения",
+          "co2_boost": "Усиление CO₂",
+          "manual_on": "Вручную включена",
+          "manual_off": "Вручную выключена",
+          "cooldown": "Пауза",
+          "blocked_by_ac": "Блок: кондиционер",
+          "blocked_by_window": "Блок: окно",
+          "max_runtime": "Макс. время работы"
         }
       },
       "co2": { "name": "CO₂" },

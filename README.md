@@ -22,6 +22,7 @@ In plain English: this is smart ventilation for Home Assistant. The window opens
 - [How It Works](#how-it-works)
 - [Temperature Ventilation](#temperature-ventilation)
 - [CO₂ Ventilation Assist](#co₂-ventilation-assist)
+- [Exhaust Fan Assist](#exhaust-fan-assist)
 - [PID Behavior](#pid-behavior)
 - [Controller Status](#controller-status)
 - [Settings And Entities](#settings-and-entities)
@@ -41,7 +42,8 @@ In plain English: this is smart ventilation for Home Assistant. The window opens
 - Protect against AC conflicts by closing the window when a selected climate entity is cooling
 - Use optional CO₂ ventilation assist for air quality
 - Treat CO₂ as part of the same final window-position calculation, not as a separate automation
-- Show status sensors for temperature control and CO₂ ventilation
+- Use an optional exhaust fan or switch as an airflow booster when the window is already open
+- Show status sensors for temperature control, CO₂ ventilation, and fan assist
 - Expose tuning values as Home Assistant entities
 
 ## How It Works
@@ -57,6 +59,8 @@ For CO₂ control, the integration can apply a temporary minimum window position
 - final window position becomes `max(10, 30) = 30%`
 
 If PID already wants `100%`, CO₂ does not override anything. It simply reports that CO₂ ventilation is active while the main temperature controller remains in charge.
+
+An optional exhaust fan can be selected as a `fan` or `switch` entity. It does not replace the window PID. It only helps airflow after the window is already open enough and natural ventilation is not producing enough effect.
 
 ## Temperature Ventilation
 
@@ -111,6 +115,27 @@ CO₂ ventilation is blocked when:
 - `auto` mode says outdoor air is not useful
 - the room is already near or below the target temperature
 
+## Exhaust Fan Assist
+
+Exhaust fan support is optional. If no fan or switch entity is selected, fan entities and logic are not created.
+
+The fan mode has two states:
+
+- `disabled` — the integration never touches the fan
+- `auto` — the integration can turn the fan on or off when airflow needs help
+
+In `auto`, the fan can turn on for temperature only when:
+
+- the window is already open at or above `Fan minimum window position`
+- the room is above target plus the temperature deadband
+- outdoor air is cooler by at least the configured cooling delta threshold
+- AC conflict protection is not blocking ventilation
+- the room temperature has not dropped enough during `Fan no cooling timeout`
+
+For CO₂, the fan can turn on when CO₂ ventilation is active and the window is already open at or above the fan minimum window position.
+
+Manual fan control has priority in `auto`: if you turn the fan entity on or off manually, the integration holds that manual state for `Fan manual override timeout` before auto control resumes.
+
 ## PID Behavior
 
 The PID calculation follows the same style as `node-red-contrib-pid`:
@@ -149,12 +174,27 @@ The CO₂ status separately explains the CO₂ side:
 - `co2_blocked_by_temperature`
 - `co2_no_effect`
 
+The fan status explains the exhaust fan side:
+
+- `disabled`
+- `idle`
+- `auto_waiting`
+- `temperature_boost`
+- `co2_boost`
+- `manual_on`
+- `manual_off`
+- `cooldown`
+- `blocked_by_ac`
+- `blocked_by_window`
+- `max_runtime`
+
 ## Settings And Entities
 
 Main controls:
 
 - `Temperature ventilation`: `disabled`, `force`, `auto`
 - `CO₂ ventilation`: `disabled`, `auto`, shown only when a CO₂ sensor is selected
+- `Fan mode`: `disabled`, `auto`, shown only when a fan or switch entity is selected
 - `AC conflict protection`, shown only when an AC climate entity is selected
 - `Target temperature`
 - `Room`
@@ -174,12 +214,14 @@ Configuration and tuning:
 - `Window movement threshold`
 - `System update interval`
 - CO₂ threshold, hysteresis, ventilation position, timeout, minimum drop, and cold-air guards
+- fan minimum window position, no-cooling timeout, minimum temperature drop, max runtime, cooldown, and manual override timeout
 
 Diagnostic sensors:
 
 - `Cooling delta`
 - `PID output`
 - `CO₂ position`
+- `Fan status`
 
 ## Installation
 
@@ -190,7 +232,7 @@ Diagnostic sensors:
 3. Install **Ventilation Controller**.
 4. Restart Home Assistant.
 5. Go to **Settings -> Devices & services -> Add integration**.
-6. Select the room sensor, optional outdoor sensor, optional AC entity, optional CO₂ sensor, and target cover.
+6. Select the room sensor, optional outdoor sensor, optional AC entity, optional CO₂ sensor, optional fan/switch entity, and target cover.
 
 ### Manual Installation
 
@@ -203,6 +245,7 @@ Copy `custom_components/ventilation_controller` to `/config/custom_components/ve
 - `auto` mode requires an outdoor sensor.
 - AC protection never turns the AC on or off; it only reacts to the selected climate entity state.
 - CO₂ ventilation never controls the window separately; it only participates in the final position calculation.
+- Fan assist never changes the PID output or window target; it only turns the selected fan/switch on or off.
 
 ## Authors
 

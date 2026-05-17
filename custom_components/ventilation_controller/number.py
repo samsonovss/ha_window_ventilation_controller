@@ -16,6 +16,12 @@ from .const import (
     CONF_CO2_NO_EFFECT_TIMEOUT,
     CONF_CO2_THRESHOLD,
     CONF_CO2_VENTILATION_POSITION,
+    CONF_EXHAUST_COOLDOWN,
+    CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT,
+    CONF_EXHAUST_MAX_RUNTIME,
+    CONF_EXHAUST_MIN_TEMP_DROP,
+    CONF_EXHAUST_MIN_WINDOW_POSITION,
+    CONF_EXHAUST_NO_COOLING_TIMEOUT,
     DOMAIN,
 )
 from . import RuntimeData
@@ -45,6 +51,15 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities) -> N
             PidWindowNumber(controller, entry.entry_id, CONF_CO2_INDOOR_GUARD_MARGIN, 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
             PidWindowNumber(controller, entry.entry_id, CONF_CO2_COLD_OUTDOOR_THRESHOLD, -30.0, 30.0, 1.0, UnitOfTemperature.CELSIUS),
             PidWindowNumber(controller, entry.entry_id, CONF_CO2_COLD_MAX_POSITION, 0.0, 100.0, 5.0, "%"),
+        ])
+    if controller.exhaust_entity:
+        numbers.extend([
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_MIN_WINDOW_POSITION, 0.0, 100.0, 5.0, "%"),
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_NO_COOLING_TIMEOUT, 1.0, 60.0, 1.0, "min"),
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_MIN_TEMP_DROP, 0.0, 2.0, 0.1, UnitOfTemperature.CELSIUS),
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_MAX_RUNTIME, 0.0, 180.0, 5.0, "min"),
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_COOLDOWN, 0.0, 120.0, 5.0, "min"),
+            PidWindowNumber(controller, entry.entry_id, CONF_EXHAUST_MANUAL_OVERRIDE_TIMEOUT, 0.0, 120.0, 5.0, "min"),
         ])
     async_add_entities(numbers)
 
@@ -90,6 +105,9 @@ class PidWindowNumber(NumberEntity):
             return
         if self._key.startswith("co2_"):
             await self._controller.async_set_co2_number(self._key, float(value))
+            return
+        if self._key.startswith("exhaust_"):
+            await self._controller.async_set_exhaust_number(self._key, float(value))
             return
 
         await self._controller.async_set_gain(self._key, float(value))

@@ -12,6 +12,7 @@ from .const import (
     CONF_AC_CLIMATE_ENTITY,
     CONF_CO2_SENSOR,
     CONF_COVER_ENTITY,
+    CONF_EXHAUST_ENTITY,
     CONF_OUTDOOR_SENSOR,
     CONF_TEMP_SENSOR,
     DEFAULT_NAME,
@@ -21,7 +22,7 @@ from .const import (
 
 def _normalize_options(data: dict) -> dict:
     normalized = dict(data)
-    for key in (CONF_OUTDOOR_SENSOR, CONF_AC_CLIMATE_ENTITY, CONF_CO2_SENSOR):
+    for key in (CONF_OUTDOOR_SENSOR, CONF_AC_CLIMATE_ENTITY, CONF_CO2_SENSOR, CONF_EXHAUST_ENTITY):
         if not normalized.get(key):
             normalized.pop(key, None)
     return normalized
@@ -30,6 +31,18 @@ def _normalize_options(data: dict) -> dict:
 def _entity_options(hass: HomeAssistant, domain: str, current: str | None = None) -> list[dict[str, str]]:
     options = [{"value": "", "label": "-"}]
     entity_ids = sorted(hass.states.async_entity_ids(domain))
+    if current and current not in entity_ids:
+        entity_ids.insert(0, current)
+    options.extend({"value": entity_id, "label": entity_id} for entity_id in entity_ids)
+    return options
+
+
+def _entity_options_multi(hass: HomeAssistant, domains: tuple[str, ...], current: str | None = None) -> list[dict[str, str]]:
+    options = [{"value": "", "label": "-"}]
+    entity_ids: list[str] = []
+    for domain in domains:
+        entity_ids.extend(hass.states.async_entity_ids(domain))
+    entity_ids = sorted(set(entity_ids))
     if current and current not in entity_ids:
         entity_ids.insert(0, current)
     options.extend({"value": entity_id, "label": entity_id} for entity_id in entity_ids)
@@ -57,6 +70,12 @@ def _options_schema(hass: HomeAssistant, data: dict | None = None) -> dict:
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         ),
+        vol.Optional(CONF_EXHAUST_ENTITY, default=data.get(CONF_EXHAUST_ENTITY, "")): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=_entity_options_multi(hass, ("fan", "switch"), data.get(CONF_EXHAUST_ENTITY)),
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
         vol.Required(CONF_COVER_ENTITY, default=data.get(CONF_COVER_ENTITY, "")): selector.EntitySelector(
             selector.EntitySelectorConfig(domain="cover")
         ),
@@ -72,7 +91,7 @@ def _config_options_schema(hass: HomeAssistant, data: dict | None = None) -> vol
 
 
 class PidWindowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 8
+    VERSION = 9
 
     async def async_step_user(self, user_input=None):
         errors = {}
