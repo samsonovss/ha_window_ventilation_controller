@@ -3,10 +3,6 @@
 [Русская версия](README.ru.md)
 
 <p align="center">
-  <img src="assets/banner-en.png" alt="Ventilation Controller" width="100%">
-</p>
-
-<p align="center">
   <img src="assets/dashboard-banner.png" alt="Ventilation Controller dashboard" width="100%">
 </p>
 
