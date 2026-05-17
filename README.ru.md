@@ -3,7 +3,7 @@
 [English version](README.md)
 
 <p align="center">
-  <img src="assets/banner.png" alt="Window Ventilation Controller" width="100%">
+  <img src="assets/banner-ru.png" alt="Window Ventilation Controller" width="100%">
 </p>
 
 Window Ventilation Controller — кастомная интеграция для Home Assistant, которая управляет окном, дверью, заслонкой или любой другой `cover`-сущностью с позицией от 0 до 100%.
