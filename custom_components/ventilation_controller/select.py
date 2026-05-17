@@ -119,7 +119,7 @@ class PidWindowExhaustModeSelect(SelectEntity):
         self._attr_device_info = controller.device_info
         self._attr_translation_key = "exhaust_mode"
         self._attr_unique_id = f"{entry_id}_exhaust_mode"
-        self._attr_icon = "cil:cooker-hood-trapezoid"
+        self._attr_icon = "mdi:fan"
         self._remove_listener = controller.register_listener(self._handle_update)
 
     async def async_added_to_hass(self) -> None:

@@ -80,7 +80,7 @@ class PidWindowNumber(NumberEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_entity_category = category
         if key.startswith("exhaust_"):
-            self._attr_icon = "cil:cooker-hood-trapezoid"
+            self._attr_icon = "mdi:fan"
 
     @property
     def native_value(self):
