@@ -6,6 +6,10 @@
   <img src="assets/banner-ru.png" alt="Ventilation Controller" width="100%">
 </p>
 
+<p align="center">
+  <img src="assets/dashboard-banner-ru.png" alt="Панель Ventilation Controller" width="100%">
+</p>
+
 Ventilation Controller — кастомная интеграция для Home Assistant, которая управляет окном, дверью, заслонкой или любой другой `cover`-сущностью с позицией от 0 до 100%.
 
 Хорошо подходит для приводов Drivent, но не привязана к ним. Можно использовать любой Home Assistant `cover`, у которого есть управление положением от 0 до 100%.
