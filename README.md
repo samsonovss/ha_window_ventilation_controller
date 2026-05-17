@@ -4,6 +4,8 @@
 
 Window Ventilation Controller is a Home Assistant custom integration for rooms with a motorized window, door, damper, or any other `cover` entity that can be positioned from 0 to 100%.
 
+It works well for Drivent window actuators, but it is not tied to Drivent. Any Home Assistant `cover` entity with 0-100% position control can be used.
+
 The idea is simple: the integration opens the window only when it is useful.
 
 It watches the room temperature, optional outdoor temperature, target temperature, optional AC state, and optional CO₂ level. If outdoor air can actually cool the room, the controller can open the window. If the outdoor air is not useful, it keeps the window closed. If the AC is running, it can close the window so you do not cool the street. If CO₂ gets high, it can add a ventilation minimum without fighting the temperature PID.
@@ -13,6 +15,7 @@ In plain English: this is smart ventilation for Home Assistant. The window opens
 ## What It Can Do
 
 - Control a motorized window, door, damper, or vent through a Home Assistant `cover` entity
+- Compatible with Drivent actuators and other 0-100% positionable covers
 - Use indoor temperature and a target temperature to calculate the window position
 - Use optional outdoor temperature to decide whether cooling with outside air makes sense
 - Support cooling modes: `disabled`, `force`, and `auto`
