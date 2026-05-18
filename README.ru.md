@@ -29,7 +29,7 @@ Ventilation Controller — кастомная интеграция для Home A
 - [Установка](#установка)
 - [Заметки](#заметки)
 - [Авторы](#авторы)
-- [Поддержать / Support](#поддержать--support)
+- [Поддержать](#поддержать)
 
 ## Что Умеет
 
@@ -255,7 +255,7 @@ PID-логика похожа на `node-red-contrib-pid`:
 
 Создано [@samsonovss](https://github.com/samsonovss) с помощью Тени, персонального AI-агента OpenClaw.
 
-## Поддержать / Support
+## Поддержать
 
 Если эта интеграция полезна, можно поддержать её разработку:
 
@@ -266,13 +266,3 @@ PID-логика похожа на `node-red-contrib-pid`:
 Пожалуйста, отправляйте на этот адрес **только Bitcoin (BTC)**. Не отправляйте USDT, ETH, BNB, TRX или другие токены на этот адрес.
 
 Спасибо за поддержку интеграции.
-
-If this integration is useful to you, you can support its development:
-
-- PayPal: samsonov@hotmail.com
-- Telegram: https://t.me/samsonovss
-- Bitcoin (BTC): `bc1q3cza0kasutzes4hfddxuclmd9ghn5v7zw2nr5c`
-
-Please send **Bitcoin (BTC) only** to the address above. Do not send USDT, ETH, BNB, TRX, or other tokens to this address.
-
-Thank you for supporting the integration.

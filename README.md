@@ -29,7 +29,7 @@ In plain English: this is smart ventilation for Home Assistant. The window opens
 - [Installation](#installation)
 - [Notes](#notes)
 - [Authors](#authors)
-- [Support / Поддержать](#support--поддержать)
+- [Support](#support)
 
 ## What It Can Do
 
@@ -255,7 +255,7 @@ Copy `custom_components/ventilation_controller` to `/config/custom_components/ve
 
 Created by [@samsonovss](https://github.com/samsonovss) with help from Shade, an OpenClaw personal AI agent.
 
-## Support / Поддержать
+## Support
 
 If this integration is useful to you, you can support its development:
 
@@ -266,13 +266,3 @@ If this integration is useful to you, you can support its development:
 Please send **Bitcoin (BTC) only** to the address above. Do not send USDT, ETH, BNB, TRX, or other tokens to this address.
 
 Thank you for supporting the integration.
-
-Если эта интеграция полезна, можно поддержать её разработку:
-
-- PayPal: samsonov@hotmail.com
-- Telegram: https://t.me/samsonovss
-- Bitcoin (BTC): `bc1q3cza0kasutzes4hfddxuclmd9ghn5v7zw2nr5c`
-
-Пожалуйста, отправляйте на этот адрес **только Bitcoin (BTC)**. Не отправляйте USDT, ETH, BNB, TRX или другие токены на этот адрес.
-
-Спасибо за поддержку интеграции.
